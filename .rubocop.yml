@@ -1,0 +1,37 @@
+AllCops:
+  Exclude:
+    - bin/**/*
+
+  TargetRubyVersion: 2.5.3
+
+Rails:
+  Enabled: false
+
+Style/FrozenStringLiteralComment:
+  Enabled: false
+
+Style/BracesAroundHashParameters:
+  Enabled: false
+
+Layout/DotPosition:
+  EnforcedStyle: trailing
+
+Metrics/AbcSize:
+  Enabled: false
+
+Metrics/BlockLength:
+  Exclude:
+    - "spec/**/*"
+    - "scree.gemspec"
+
+Metrics/ClassLength:
+  Enabled: false
+
+Metrics/CyclomaticComplexity:
+  Enabled: false
+
+Metrics/MethodLength:
+  Enabled: false
+
+Metrics/PerceivedComplexity:
+  Enabled: false
