@@ -39,13 +39,14 @@ Gem::Specification.new do |spec|
   spec.bindir        = 'bin'
   spec.require_paths = ['lib']
 
-  spec.add_development_dependency 'bundler', '~> 1.17'
+  spec.add_development_dependency 'bundler', '~> 2.0'
   spec.add_development_dependency 'rake', '~> 10.0'
   spec.add_development_dependency 'rspec', '~> 3.0'
   spec.add_development_dependency 'rubocop', '~> 0.61'
 
   # Hard cap on some dependencies because we're extending some internals
-  spec.add_runtime_dependency 'capybara', '>= 2.13', '< 3.13'
-  spec.add_runtmie_dependency 'rack', '~> 2.0'
-  spec.add_runtime_dependency 'selenium-webdriver', '>= 3.8', '< 3.142'
+  spec.add_runtime_dependency 'capybara', '>= 3.9', '< 3.13'
+  spec.add_runtime_dependency 'chrome_remote', '>= 0.2.0'
+  spec.add_runtime_dependency 'rack', '~> 2.0'
+  spec.add_runtime_dependency 'selenium-webdriver', '>= 3.13', '< 3.142'
 end
