@@ -10,14 +10,9 @@ Rails:
 Style/FrozenStringLiteralComment:
   Enabled: false
 
-Style/BracesAroundHashParameters:
-  Enabled: false
-
-Layout/DotPosition:
-  EnforcedStyle: trailing
-
-Metrics/AbcSize:
-  Enabled: false
+Layout/AlignHash:
+  EnforcedHashRocketStyle: table
+  EnforcedColonStyle: table
 
 Metrics/BlockLength:
   Exclude:
@@ -25,13 +20,13 @@ Metrics/BlockLength:
     - "scree.gemspec"
 
 Metrics/ClassLength:
-  Enabled: false
+  Max: 128
 
 Metrics/CyclomaticComplexity:
-  Enabled: false
+  Max: 8
 
 Metrics/MethodLength:
-  Enabled: false
+  Max: 16
 
 Metrics/PerceivedComplexity:
-  Enabled: false
+  Max: 8

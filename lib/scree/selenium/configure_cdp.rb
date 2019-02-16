@@ -1,9 +1,9 @@
 # frozen_string_literal: true
 
-module EnableRemoteDebugging
+module ConfigureCdp
   def initialize(executable_path, port, driver_opts)
     super
-    @debugging_port = port + 1 # This is recalculated anyway
+    @debugging_port = 4444 # This is recalculated anyway
   end
 
   def debugging_uri
@@ -13,10 +13,10 @@ module EnableRemoteDebugging
   private
 
   def start_process
-    @debugging_port = PortProber.above(calculated_port)
+    # @debugging_port = 4444 || Selenium::WebDriver::PortProber.above(@debugging_port)
     @extra_args << "--remote-debugging-port=#{@debugging_port}"
     super
   end
 end
 
-::Selenium::WebDriver::Chrome::Service.prepend EnableRemoteDebugging
+::Selenium::WebDriver::Chrome::Service.prepend ConfigureCdp
