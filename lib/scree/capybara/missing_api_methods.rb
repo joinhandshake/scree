@@ -34,7 +34,7 @@ module MissingApiMethods
 
   # TODO: This is finicky in CDP. There might be a better way.
   def header(key, value)
-    params = { headers: { key => value }}
+    params = { headers: { key => value } }
     browser.execute_cdp('Network.setExtraHTTPHeaders', params)
   end
 

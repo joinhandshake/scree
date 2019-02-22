@@ -1,5 +1,4 @@
 require 'spec_helper'
-require 'pry'
 require 'uri'
 
 describe Capybara::Selenium::Driver do

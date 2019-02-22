@@ -1,14 +1,6 @@
 module MissingSessionMethods
-  SESSION_METHODS =
-    (
-      Capybara::Session::SESSION_METHODS +
-      %i[with_user_agent console_messages error_messages cookies set_cookie clear_cookies header]
-    ).freeze
-  DSL_METHODS =
-    (
-      Capybara::Session::DSL_METHODS +
-      %i[with_user_agent console_messages error_messages cookies set_cookie clear_cookies header]
-    ).freeze
+  NEW_SESSION_METHODS =
+    %i[with_user_agent console_messages error_messages cookies set_cookie clear_cookies header].freeze
 
   def with_user_agent(user_agent_string)
     unless block_given?
@@ -42,6 +34,12 @@ module MissingSessionMethods
 
   def clear_cookies
     driver.clear_cookies
+  end
+
+  NEW_SESSION_METHODS.each do |method|
+    Capybara::DSL.define_method method do |*args, &block|
+      Capybara.current_session.send method, *args, &block
+    end
   end
 end
 

@@ -40,6 +40,10 @@ class TestApp < Sinatra::Base
         %label(for='custom_headers') Custom header JSON
         %textarea#custom_headers(name='custom_headers')
         %button(name='submit') Submit
+      %hr
+      %h3 Current Headers
+      .current-headers
+        #{request.env.select { |k, _| /^[A-Z_]+$/.match?(k) }.to_json}
     HAML_DOC
   end
 
