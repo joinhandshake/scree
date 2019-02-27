@@ -6,9 +6,11 @@ require 'selenium/webdriver'
 require 'support/test_app'
 require 'nokogiri'
 require 'scree'
+require 'scree/rspec_matchers'
 
 RSpec.configure do |config|
   config.include Capybara::DSL
+  config.include Scree::RspecMatchers
 
   Capybara.register_driver :chrome_headless do |app|
     options = Selenium::WebDriver::Chrome::Options.new
@@ -33,11 +35,11 @@ RSpec.configure do |config|
 
     Capybara::Selenium::Driver.new(
       app,
-      browser: :chrome,
-      clear_local_storage: true,
+      browser:              :chrome,
+      clear_local_storage:  true,
       desired_capabilities: capabilities,
-      options: options,
-      cdp_options: cdp_options
+      options:              options,
+      cdp_options:          cdp_options
     )
   end
 
