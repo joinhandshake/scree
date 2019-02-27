@@ -1,10 +1,10 @@
 module MissingApiMethods
   def response_headers
-    response['headers']
+    response.headers
   end
 
   def status_code
-    response['status']
+    response.status
   end
 
   # Interface from capybara-webkit
@@ -14,7 +14,7 @@ module MissingApiMethods
   end
 
   def error_messages
-    console_messages.select { |msg| msg['type'] == 'error' }
+    console_messages.select { |msg| msg.type == 'error' }
   end
   alias js_errors error_messages
 
@@ -43,10 +43,10 @@ module MissingApiMethods
   def response
     responses =
       browser.cdp_events['Network.responseReceived'].select do |event|
-        event['response']['url'] == browser.current_url
+        event.response.url == browser.current_url
       end
 
-    responses.max_by { |a| a['timestamp'] }['response'] || {}
+    responses.max_by(&:timestamp).response || {}
   end
 end
 

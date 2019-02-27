@@ -2,6 +2,7 @@
 
 require 'chrome_remote'
 require 'concurrent'
+require 'ostruct'
 require 'securerandom'
 require 'timeout'
 
@@ -46,27 +47,37 @@ module CdpDriver
     @cdp_bridge =
       ChromeRemote.client(host: debugging_uri.host, port: debugging_uri.port)
 
-    handler_hash =
-      Hash.new do |hash, event_name|
-        handle_any = proc { |result| cdp_events[event_name].unshift(result) }
-        hash[event_name] = [handle_any]
-      end
-
-    # The chrome_remote handler code is kinda touchy, and we want to just grab
-    # all enabled anyway.
-    @cdp_bridge.instance_variable_set(:@handlers, handler_hash)
-
     enable_cdp_domains(cdp_opts[:domains]) if cdp_opts.key?(:domains)
 
     Thread.new do
-      @cdp_bridge.listen
+      loop do
+        msg = JSON.parse(@cdp_bridge.ws.read_msg, object_class: OpenStruct)
+
+        event_name = msg['method']
+        event_id   = msg.id
+
+        # Normally, for messages with an id, we expect a 'result' field, and
+        # messages with a method, we expect a 'params' field. However, this can
+        # sometimes end up with confusing results, so store both (where
+        # available) just to be sure.
+        result = msg
+        params = msg.params || msg.result
+
+        cdp_events[event_id].unshift(result) if event_id
+        cdp_events[event_name].unshift(params) if event_name
+      rescue JSON::ParserError
+        next
+      end
     rescue EOFError
       puts 'CDP connection closed'
     end
   end
 
   def execute_cdp(cmd, **params)
-    bridge.send_command(cmd: cmd, params: params)
+    msg_id = Random.new.rand(2**16)
+
+    @cdp_bridge.ws.send_msg({ method: cmd, params: params, id: msg_id }.to_json)
+    wait_for_event(msg_id)
   end
 
   def on_cdp_event(event_name, &block)
@@ -112,7 +123,7 @@ module CdpDriver
       loop do
         # Possible race condition?
         if cdp_events[event_name].count > current_count
-          return cdp_events.first
+          return cdp_events[event_name].first
         end
       end
     end

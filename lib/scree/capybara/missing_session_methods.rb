@@ -36,6 +36,10 @@ module MissingSessionMethods
     driver.clear_cookies
   end
 
+  def header(*args)
+    driver.header(*args)
+  end
+
   NEW_SESSION_METHODS.each do |method|
     Capybara::DSL.define_method method do |*args, &block|
       Capybara.current_session.send method, *args, &block

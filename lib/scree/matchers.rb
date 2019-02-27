@@ -78,7 +78,7 @@ module Capybara
           Timeout::timeout(wait) {
             loop do
               received = browser.cdp_events['Network.responseReceived'][begin_index..-1].any? do |event|
-                event['response']['url'].match? pattern
+                event.response.url.match? pattern
               end
 
               break if received

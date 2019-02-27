@@ -3,12 +3,23 @@ require 'spec_helper'
 describe Capybara::Selenium::Driver::ChromeDriver do
   # This does not work right with CDP; find another way.
   describe '#blocked_urls=' do
-    xit 'blocks specified urls'
+    it 'blocks specified urls' do
+      expect do
+        page.driver.blocked_urls = ['https://google.com']
+      end.to raise_error(NotImplementedError)
+    end
   end
 
-  # This does not work right with CDP; find another way.
   describe '#extra_http_headers=' do
-    xit 'sends extra http headers'
+    it 'sends extra http headers' do
+      visit '/check-headers'
+      page.driver.extra_http_headers = { 'X-TEST-EXTRA-HEADER' => 'test' }
+
+      click_on 'Submit'
+
+      current_headers = JSON.parse(page.find('.request-headers').text)
+      expect(current_headers['HTTP_X_TEST_EXTRA_HEADER']).to eq 'test'
+    end
   end
 
   describe '#user_agent' do

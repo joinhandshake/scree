@@ -33,7 +33,7 @@ describe Capybara::Selenium::Driver do
 
       find('.page-loaded') # Ensure console has time to fire.
 
-      log_message = page.console_messages.first['args'].first['value']
+      log_message = page.console_messages.first.args.first.value
 
       expect(log_message).to eq 'everything is awesome'
     end
@@ -49,7 +49,7 @@ describe Capybara::Selenium::Driver do
 
       find('.page-loaded') # Ensure console has time to fire.
 
-      log_message = page.error_messages.first['args'].first['value']
+      log_message = page.error_messages.first.args.first.value
 
       expect(log_message).to eq 'everything is awful'
     end
@@ -102,7 +102,7 @@ describe Capybara::Selenium::Driver do
 
   describe '#header' do
     # This does not work right with CDP; find another way.
-    xit 'sets extra header' do
+    it 'sets extra header' do
       visit '/check-headers'
 
       page.header('X-TEST-HEADER', 'request-test')
@@ -114,7 +114,7 @@ describe Capybara::Selenium::Driver do
 
       request_headers = JSON.parse(page.find('.request-headers').text)
 
-      expect(request_headers['X-TEST-HEADER']).to eq 'request-test'
+      expect(request_headers['HTTP_X_TEST_HEADER']).to eq 'request-test'
     end
   end
 end

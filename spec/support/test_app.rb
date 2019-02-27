@@ -48,7 +48,12 @@ class TestApp < Sinatra::Base
   end
 
   post '/check-headers' do
-    custom_headers = JSON.parse(params['custom_headers'])
+    custom_headers =
+      begin
+        JSON.parse(params['custom_headers'])
+      rescue JSON::ParserError
+        {}
+      end
 
     status 200
     headers custom_headers.merge(headers)
