@@ -10,5 +10,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - Add initial gem configuration.
+- Add base functionality.
 
 [unreleased]: https://github.com/joinhandshake/scree/compare/c8870d3...HEAD
