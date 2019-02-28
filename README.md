@@ -88,6 +88,10 @@ end
 
 Right now, some parts of the implementation are fairly inefficient. Specifically:
 
+### Console/Error Messages
+
+These are in a different format than in capybara-webkit. The decision to do so was made in the interest of allowing developers to receive more nuanced data.
+
 ### DevTool Domains
 
 We enable _all_ of the Chrome DevTool domains. This may have significant effects on memory usage and run-time, due to the large-scale logging of requests.
