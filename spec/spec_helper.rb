@@ -4,7 +4,6 @@ require 'capybara'
 require 'capybara/rspec'
 require 'selenium/webdriver'
 require 'support/test_app'
-require 'nokogiri'
 require 'scree'
 require 'scree/rspec_matchers'
 

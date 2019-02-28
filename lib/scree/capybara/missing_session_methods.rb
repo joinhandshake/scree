@@ -47,4 +47,4 @@ module MissingSessionMethods
   end
 end
 
-Capybara::Session.prepend MissingSessionMethods
+::Capybara::Session.prepend MissingSessionMethods
