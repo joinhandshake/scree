@@ -38,7 +38,7 @@ Or install it yourself as:
 
 ## Usage
 
-This gem largely uses [module prepending](https://ruby-doc.org/core-2.5.3/Module.html#method-i-prepend) to extend the functionality of Capybara, thus essentially building it into their DSL. If you're unfamiliar with `Module#prepend`, [this excellent StackOverflow answer](<(https://stackoverflow.com/a/4471202)>) by [Jörg W Mittag](https://github.com/JoergWMittag) for a good explanation.
+This gem largely uses [module prepending](https://ruby-doc.org/core-2.5.3/Module.html#method-i-prepend) to extend the functionality of Capybara, thus essentially building it into their DSL. If you're unfamiliar with `Module#prepend`, see [this excellent StackOverflow answer](https://stackoverflow.com/a/4471202) by [Jörg W Mittag](https://github.com/JoergWMittag) for a good explanation.
 
 Because of this, these methods can be used just like any of their built-in siblings:
 
