@@ -53,6 +53,6 @@ Gem::Specification.new do |spec|
   # Hard cap on some dependencies because we're extending some internals
   spec.add_runtime_dependency 'capybara', '>= 3.9', '< 3.13'
   spec.add_runtime_dependency 'chrome_remote', '>= 0.2.0'
-  spec.add_runtime_dependency 'concurrent-ruby', '~> 1.1'
+  spec.add_runtime_dependency 'concurrent-ruby', '~> 1'
   spec.add_runtime_dependency 'rack', '~> 2.0'
 end

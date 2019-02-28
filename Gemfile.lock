@@ -4,7 +4,7 @@ PATH
     scree (0.0.1)
       capybara (>= 3.9, < 3.13)
       chrome_remote (>= 0.2.0)
-      concurrent-ruby (~> 1.1)
+      concurrent-ruby (~> 1)
       rack (~> 2.0)
 
 GEM
