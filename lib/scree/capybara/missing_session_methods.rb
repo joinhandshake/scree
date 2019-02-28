@@ -41,7 +41,7 @@ module MissingSessionMethods
   end
 
   NEW_SESSION_METHODS.each do |method|
-    Capybara::DSL.define_method method do |*args, &block|
+    ::Capybara::DSL.define_method method do |*args, &block|
       Capybara.current_session.send method, *args, &block
     end
   end
