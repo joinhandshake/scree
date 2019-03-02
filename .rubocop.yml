@@ -19,6 +19,9 @@ Metrics/BlockLength:
     - "spec/**/*"
     - "scree.gemspec"
 
+Layout/DotPosition:
+  EnforcedStyle: leading
+
 Metrics/ClassLength:
   Max: 128
 

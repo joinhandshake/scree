@@ -4,7 +4,10 @@ require 'chrome_remote'
 require 'concurrent'
 require 'ostruct'
 require 'securerandom'
+require 'selenium/webdriver/common/port_prober'
+require 'selenium/webdriver/common/service'
 require 'timeout'
+require 'pry'
 
 module CdpDriver
   # This only encludes domains that support "enable".
@@ -39,13 +42,26 @@ module CdpDriver
   def initialize(opts = {})
     # This is intended to accept both enable_cdp: true as well as an array
     # of cdp domains, e.g. enable_cdp: ['Network', 'Console']
-    cdp_opts = opts.delete(:cdp_options)
+    cdp_opts = opts.delete(:cdp_options) { {} }
 
     super
 
-    debugging_uri = @service.debugging_uri
+    # Specifying a debugger address ourselves can interfere with Selenium and
+    # vice-versa, so we'll just piggyback on whatever they end up using.
+    debugger_address =
+      @bridge.http.
+              call(:get, "/session/#{@bridge.session_id}", nil).
+              payload.
+              dig('value', 'goog:chromeOptions', 'debuggerAddress')
+
+    debugger_address.prepend('http://') unless debugger_address.match?(%r{^\w+://})
+    debugger_uri = URI.parse(debugger_address)
+
     @cdp_bridge =
-      ChromeRemote.client(host: debugging_uri.host, port: debugging_uri.port)
+      ChromeRemote.client(
+        host: debugger_uri.host,
+        port: debugger_uri.port
+      )
 
     enable_cdp_domains(cdp_opts[:domains]) if cdp_opts.key?(:domains)
 

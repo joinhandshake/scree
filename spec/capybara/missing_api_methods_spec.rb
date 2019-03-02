@@ -1,5 +1,6 @@
 require 'spec_helper'
 require 'uri'
+require 'pry'
 
 describe Capybara::Selenium::Driver do
   describe '#response_headers' do
@@ -58,12 +59,12 @@ describe Capybara::Selenium::Driver do
   describe '#cookies' do
     it 'gets the cookies' do
       visit '/'
-      expect(page.cookies.first[:value]).to eq 'root-cookie'
+      expect(page.driver.cookies.first[:value]).to eq 'root-cookie'
     end
   end
 
   describe '#set_cookie' do
-    it 'sets a cookie' do
+    it 'sets a cookie from hash' do
       visit '/'
 
       test_cookie = {
@@ -75,14 +76,32 @@ describe Capybara::Selenium::Driver do
         secure:  false
       }
 
-      expect(page.cookies.count).to eq 1
-      expect(page.cookies.first[:value]).to eq 'root-cookie'
+      expect(page.driver.cookies.count).to eq 1
+      expect(page.driver.cookies.first[:value]).to eq 'root-cookie'
 
-      page.set_cookie test_cookie
+      page.driver.set_cookie test_cookie
       visit '/check-cookies'
 
       parsed_cookies = JSON.parse(page.text)
 
+      expect(parsed_cookies.count).to eq 2
+      expect(parsed_cookies['scree']).to eq 'test-cookie'
+    end
+
+    it 'sets a cookie from string' do
+      visit '/'
+
+      domain      = URI.parse(current_url).hostname
+      test_cookie = "scree=test-cookie; domain=#{domain}; path=/; expires=#{Time.now.utc}; secure=false; httponly=true"
+
+      expect(page.driver.cookies.count).to eq 1
+      expect(page.driver.cookies.first[:value]).to eq 'root-cookie'
+
+      page.driver.set_cookie test_cookie
+      visit '/check-cookies'
+
+      parsed_cookies = JSON.parse(page.text)
+binding.pry
       expect(parsed_cookies.count).to eq 2
       expect(parsed_cookies['scree']).to eq 'test-cookie'
     end
@@ -91,9 +110,9 @@ describe Capybara::Selenium::Driver do
   describe '#clear_cookies' do
     it 'clears all cookies' do
       visit '/'
-      expect(page.cookies.first[:value]).to eq 'root-cookie'
+      expect(page.driver.cookies.first[:value]).to eq 'root-cookie'
 
-      page.clear_cookies
+      page.driver.clear_cookies
       visit '/check-cookies'
 
       expect(JSON.parse(page.text)).to be_empty

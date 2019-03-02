@@ -1,6 +1,8 @@
+require 'capybara/dsl'
+
 module MissingSessionMethods
   NEW_SESSION_METHODS =
-    %i[with_user_agent console_messages error_messages cookies set_cookie clear_cookies header].freeze
+    %i[with_user_agent console_messages error_messages header].freeze
 
   def with_user_agent(user_agent_string)
     unless block_given?
@@ -22,18 +24,6 @@ module MissingSessionMethods
 
   def error_messages
     driver.error_messages
-  end
-
-  def cookies
-    driver.cookies
-  end
-
-  def set_cookie(**args)
-    driver.set_cookie(**args)
-  end
-
-  def clear_cookies
-    driver.clear_cookies
   end
 
   def header(*args)

@@ -1,3 +1,4 @@
+require 'time'
 module MissingApiMethods
   def response_headers
     response.headers
@@ -22,10 +23,48 @@ module MissingApiMethods
     browser.manage.all_cookies
   end
 
-  def set_cookie(opts = {})
+  def set_cookie(cookie)
     # Convert capybara-webkit args to what Selenium needs
-    opts = CGI::Cookie.parse(cookie) if opts.is_a? String
-    browser.manage.add_cookie(opts)
+    cookie = CGI::Cookie.parse(cookie) if cookie.is_a? String
+
+    # Cookies can come in all kinds of hash formats (depending on what gem
+    # created the hash). We'll try and transform it here.
+
+    cookie_hash = {}
+
+    # Ensure we have string keys for easier processing/lookup
+    cookie = cookie.collect { |key, value| [key.to_s, value] }.to_h
+
+    %w[path domain secure httponly].each do |key|
+      value = cookie.delete(key)
+      value =
+        if value.is_a? Array
+          value.first
+        else
+          value
+        end
+
+      cookie_hash[key.to_sym] = value unless value.nil?
+    end
+
+    cookie_hash[:name] = cookie.delete('name') { cookie.keys.first }
+
+    value = cookie.delete('value') { cookie.delete(cookie_hash[:name]) }
+    cookie_hash[:value] =
+      if value.is_a? Array
+        value.one? && value.first || value.to_a
+      else
+        value
+      end
+
+    expires = cookie.delete('expires')
+    cookie_hash[:expires] = Time.parse(expires) unless expires.nil?
+
+    browser.manage.add_cookie(cookie_hash)
+  end
+
+  def delete_cookie(name)
+    browser.manage.delete_cookie(name)
   end
 
   def clear_cookies

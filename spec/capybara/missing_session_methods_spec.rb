@@ -29,7 +29,7 @@ describe Capybara::Session do
     end
   end
 
-  %i[console_messages error_messages cookies set_cookie clear_cookies].each do |driver_method|
+  %i[console_messages error_messages].each do |driver_method|
     describe "##{driver_method}" do
       it "calls the driver's #{driver_method} method" do
         visit '/'
