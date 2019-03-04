@@ -58,7 +58,7 @@ module MissingApiMethods
       end
 
     expires = cookie.delete('expires')
-    cookie_hash[:expires] = Time.parse(expires) unless expires.nil?
+    cookie_hash[:expires] = Time.parse(expires.to_s) unless expires.nil?
 
     browser.manage.add_cookie(cookie_hash)
   end

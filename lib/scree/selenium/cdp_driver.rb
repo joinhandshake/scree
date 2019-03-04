@@ -7,7 +7,6 @@ require 'securerandom'
 require 'selenium/webdriver/common/port_prober'
 require 'selenium/webdriver/common/service'
 require 'timeout'
-require 'pry'
 
 module CdpDriver
   # This only encludes domains that support "enable".
@@ -89,7 +88,7 @@ module CdpDriver
     end
   end
 
-  def execute_cdp(cmd, **params)
+  def execute_cdp(cmd, params = {})
     msg_id = Random.new.rand(2**16)
 
     @cdp_bridge.ws.send_msg({ method: cmd, params: params, id: msg_id }.to_json)
