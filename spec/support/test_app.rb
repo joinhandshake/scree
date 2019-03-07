@@ -12,9 +12,9 @@ class TestApp < Sinatra::Base
   get '/' do
     response.set_cookie(
       'capybara',
-      value: 'root-cookie',
+      value:  'root-cookie',
       domain: request.host,
-      path: request.path
+      path:   request.path
     )
 
     haml <<~HAML_DOC

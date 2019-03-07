@@ -21,9 +21,9 @@ RSpec.configure do |config|
     capabilities = Selenium::WebDriver::Remote::Capabilities.chrome(
       loggingPrefs: {
         browser: 'ALL',
-        client: 'ALL',
-        driver: 'ALL',
-        server: 'ALL'
+        client:  'ALL',
+        driver:  'ALL',
+        server:  'ALL'
       }
     )
 

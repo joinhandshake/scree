@@ -39,6 +39,7 @@ Gem::Specification.new do |spec|
   spec.bindir        = 'bin'
   spec.require_paths = ['lib']
 
+  spec.add_development_dependency 'awesome_print', '>= 2.0.0pre', '< 3.0'
   spec.add_development_dependency 'bundler', '~> 2.0'
   spec.add_development_dependency 'haml'
   spec.add_development_dependency 'pry'
@@ -46,7 +47,6 @@ Gem::Specification.new do |spec|
   spec.add_development_dependency 'rake', '~> 10.0'
   spec.add_development_dependency 'rspec', '~> 3.0'
   spec.add_development_dependency 'rubocop', '~> 0.61'
-  spec.add_development_dependency 'selenium-webdriver', '>= 3.13', '< 3.142'
   spec.add_development_dependency 'sinatra', '~> 2.0'
   spec.add_development_dependency 'sinatra-contrib'
 
@@ -55,4 +55,5 @@ Gem::Specification.new do |spec|
   spec.add_runtime_dependency 'chrome_remote', '>= 0.2.0'
   spec.add_runtime_dependency 'concurrent-ruby', '~> 1'
   spec.add_runtime_dependency 'rack', '~> 2.0'
+  spec.add_runtime_dependency 'selenium-webdriver', '>= 3.13', '< 3.142'
 end

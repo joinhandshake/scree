@@ -48,10 +48,10 @@ module CdpDriver
     # Specifying a debugger address ourselves can interfere with Selenium and
     # vice-versa, so we'll just piggyback on whatever they end up using.
     debugger_address =
-      @bridge.http.
-              call(:get, "/session/#{@bridge.session_id}", nil).
-              payload.
-              dig('value', 'goog:chromeOptions', 'debuggerAddress')
+      @bridge.http
+             .call(:get, "/session/#{@bridge.session_id}", nil)
+             .payload
+             .dig('value', 'goog:chromeOptions', 'debuggerAddress')
 
     debugger_address.prepend('http://') unless debugger_address.match?(%r{^\w+://})
     debugger_uri = URI.parse(debugger_address)
