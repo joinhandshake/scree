@@ -45,102 +45,94 @@ module CdpDriver
 
     super
 
-    # Specifying a debugger address ourselves can interfere with Selenium and
-    # vice-versa, so we'll just piggyback on whatever they end up using.
-    debugger_address =
-      @bridge.http
-             .call(:get, "/session/#{@bridge.session_id}", nil)
-             .payload
-             .dig('value', 'goog:chromeOptions', 'debuggerAddress')
-
-    debugger_address.prepend('http://') unless debugger_address.match?(%r{^\w+://})
-    debugger_uri = URI.parse(debugger_address)
-
+    @caches =
+      Concurrent::Map.new do |map, event_name|
+        map[event_name] = Concurrent::Array.new
+      end
     @cdp_bridge =
-      ChromeRemote.client(
+      Scree::Chrome.client(
         host: debugger_uri.host,
         port: debugger_uri.port
       )
 
     enable_cdp_domains(cdp_opts[:domains]) if cdp_opts.key?(:domains)
-
-    Thread.new do
-      loop do
-        msg = JSON.parse(@cdp_bridge.ws.read_msg, object_class: OpenStruct)
-
-        event_name = msg['method']
-        event_id   = msg.id
-
-        # Normally, for messages with an id, we expect a 'result' field, and
-        # messages with a method, we expect a 'params' field. However, this can
-        # sometimes end up with confusing results, so store both (where
-        # available) just to be sure.
-        result = msg
-        params = msg.params || msg.result
-
-        cdp_events[event_id].unshift(result) if event_id
-        cdp_events[event_name].unshift(params) if event_name
-      rescue JSON::ParserError
-        next
-      end
-    rescue EOFError
-      puts 'CDP connection closed'
-    end
   end
 
   def execute_cdp(cmd, params = {})
-    msg_id = Random.new.rand(2**16)
+    @cdp_bridge.ask(cmd, params)
+  end
 
-    @cdp_bridge.ws.send_msg({ method: cmd, params: params, id: msg_id }.to_json)
-    wait_for_event(msg_id)
+  def send_cdp(cmd, params = {})
+    @cdp_bridge.tell(cmd, params)
   end
 
   def on_cdp_event(event_name, &block)
     raise(Error::WebDriverError, 'no debugger attached') unless @cdp_bridge
 
-    @cdp_bridge.on(event_name, &block)
+    @cdp_bridge.add_handler(event_name, &block)
   end
 
-  def wait_for_cdp_event(event_name = nil)
+  def wait_for_cdp_event(event_name, &block)
     raise(Error::WebDriverError, 'no debugger attached') unless @cdp_bridge
 
-    yield wait_for_event(event_name) if block_given?
+    # We could possibly chain the remove_handler on this, but passing the UUID
+    # around seems a bit messy.
+    promise = Concurrent::Promises.resolvable_future
+    promise = promise.then(&block) if block_given?
+
+    uuid = @cdp_bridge.add_handler(event_name) do |event|
+      promise.fulfill(event) if promise.pending?
+    end
+
+    promise.wait(Capybara.default_max_wait_time)
+    @cdp_bridge.remove_handler(uuid, event_name)
+    promise.value!
   end
 
-  # TODO: raise if attempting to get an event that's not being recorded
-  def cdp_events
-    @cdp_events ||=
-      Concurrent::Map.new do |map, event|
-        map[event] = Concurrent::Array.new
+  def reset_cdp!
+    @cdp_bridge.reset!
+    @caches =
+      Concurrent::Map.new do |map, event_name|
+        map[event_name] = Concurrent::Array.new
       end
   end
 
+  def fetch_events(event_name)
+    @caches[event_name].to_a
+  end
+
   private
+
+  # Specifying a debugger address ourselves can interfere with Selenium and
+  # vice-versa, so we'll just piggyback on whatever they end up using.
+  def debugger_uri
+    return @debugger_uri if @debugger_uri
+
+    debugger_address =
+      @bridge.http.
+      call(:get, "/session/#{@bridge.session_id}", nil).
+      payload.
+      dig('value', 'goog:chromeOptions', 'debuggerAddress')
+
+    debugger_address.prepend('http://') unless debugger_address.match?(%r{^\w+://})
+    @debugger_uri = URI.parse(debugger_address)
+  end
 
   def enable_cdp_domains(domains)
     domains.each do |domain|
       next unless CDP_DOMAINS.include?(domain)
 
       @cdp_bridge.send_cmd "#{domain}.enable"
+      add_cache_listener(domain)
     end
   end
 
-  def register_cdp_listeners(events)
-    events.each do |event|
-      on_cdp_event(event) { |result| cdp_events[event].unshift(result) }
-    end
-  end
+  # Currently, we automatically enable caches for enabled domain events
+  def add_cache_listener(domain)
+    @cdp_bridge.add_handler(:global) do |event_name, event|
+      next unless event_name.start_with?(domain)
 
-  def wait_for_event(event_name)
-    current_count = cdp_events[event_name].count
-
-    Timeout.timeout(5, Timeout::Error, 'Timed out waiting for CDP event') do
-      loop do
-        # Possible race condition?
-        if cdp_events[event_name].count > current_count
-          return cdp_events[event_name].first
-        end
-      end
+      @caches[event_name] << event
     end
   end
 end

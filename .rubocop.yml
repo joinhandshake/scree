@@ -20,7 +20,7 @@ Metrics/BlockLength:
     - "scree.gemspec"
 
 Layout/DotPosition:
-  EnforcedStyle: leading
+  EnforcedStyle: trailing
 
 Metrics/ClassLength:
   Max: 128

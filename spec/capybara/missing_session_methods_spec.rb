@@ -40,4 +40,16 @@ describe Capybara::Session do
       end
     end
   end
+
+  %i[block_url unblock_url].each do |driver_method|
+    describe "##{driver_method}" do
+      it "calls the driver's #{driver_method} method" do
+        visit '/'
+
+        expect(page.driver).to receive(driver_method)
+
+        page.send(driver_method, 'argument')
+      end
+    end
+  end
 end

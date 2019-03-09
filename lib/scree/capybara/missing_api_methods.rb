@@ -11,11 +11,11 @@ module MissingApiMethods
   # Interface from capybara-webkit
 
   def console_messages
-    browser.cdp_events['Runtime.consoleAPICalled']
+    browser.fetch_events('Runtime.consoleAPICalled')
   end
 
   def error_messages
-    console_messages.select { |msg| msg.type == 'error' }
+    console_messages.select { |msg| msg['type'] == 'error' }
   end
   alias js_errors error_messages
 
@@ -71,22 +71,21 @@ module MissingApiMethods
     browser.manage.delete_all_cookies
   end
 
-  # TODO: This is finicky in CDP. There might be a better way.
   def header(key, value)
     params = { headers: { key => value } }
-    browser.execute_cdp('Network.setExtraHTTPHeaders', params)
+    send_cdp('Network.setExtraHTTPHeaders', params)
   end
 
-  # This ends up just stalling the request which eventually raises a
-  # Net::Timeout after a few minutes, but causes the browser to stall entirely,
-  # which is not ideal for tests.
-  def blocked_urls=(_urls)
-    raise NotImplementedError
-    # execute_cdp('Network.setBlockedURLs', 'urls': array_wrap(urls))
+  def block_urls(*urls)
+    send_blocked_urls(urls)
+
+    yield
+
+    clear_blocked_urls
   end
 
   def extra_http_headers=(headers)
-    browser.execute_cdp('Network.setExtraHTTPHeaders', 'headers': headers)
+    send_cdp('Network.setExtraHTTPHeaders', 'headers': headers)
   end
 
   def user_agent
@@ -94,13 +93,17 @@ module MissingApiMethods
   end
 
   def user_agent=(user_agent)
-    browser.execute_cdp('Network.setUserAgentOverride', 'userAgent': user_agent.to_s)
+    send_cdp('Network.setUserAgentOverride', 'userAgent': user_agent.to_s)
   end
 
   private
 
   def execute_cdp(cmd, params = {})
     browser.execute_cdp(cmd, params)
+  end
+
+  def send_cdp(cmd, params = {})
+    browser.send_cdp(cmd, params)
   end
 
   # Cribbed from https://github.com/rails/rails/blob/master/activesupport/lib/active_support/core_ext/array/wrap.rb
@@ -116,11 +119,84 @@ module MissingApiMethods
 
   def response
     responses =
-      browser.cdp_events['Network.responseReceived'].select do |event|
-        event.response.url == browser.current_url
+      browser.fetch_events('Network.responseReceived').select do |event|
+        event.dig('response', 'url') == browser.current_url
       end
 
-    responses.max_by(&:timestamp).response || {}
+    responses.max_by { |resp| resp['timestamp'] }.response || {}
+  end
+
+  # Providing regex/wildcarded URLs is not currently supported, due to the
+  # extreme jank-factor of CDP's URL filtering
+  def send_blocked_urls(blocked_urls)
+    @request_intercept_uuid = register_blocked_url_callback(blocked_urls)
+    url_patterns = build_url_patterns(blocked_urls)
+
+    patterns = url_patterns.map { |url| { 'urlPattern' => url } }
+    execute_cdp('Network.setRequestInterception', 'patterns' => patterns)
+  end
+
+  def clear_blocked_urls
+    browser.
+      instance_variable_get(:@cdp_bridge).
+      remove_handler(
+        @request_intercept_uuid,
+        event_name: 'Network.requestIntercepted'
+      )
+    @request_intercept_uuid = nil
+    execute_cdp('Network.setRequestInterception', 'patterns' => [])
+  end
+
+  # This callback will just block all intercepted requests. This is because
+  # Chrome doesn't allow you to register multiple interceptions, nor merge
+  # existing ones, so we're overwriting what, if anything is there anyway.
+  def register_blocked_url_callback
+    browser.on_cdp_event('Network.requestIntercepted') do |message|
+      response =
+        browser.execute_cdp(
+          'Network.continueInterceptedRequest',
+          'interceptionId' => message['interception_id'],
+          'errorReason'    => 'BlockedByClient'
+        )
+
+      error = response.dig('error', 'message')
+      raise error if error
+    rescue StandardError
+      continue_all_requests!
+      raise
+    end
+  end
+
+  # Chrome doesn't take actual regex, just wildcards '*' and '?'
+  def build_url_patterns(blocked_urls)
+    blocked_urls.map do |url|
+      uri  = URI.parse(url)
+      host = uri.host.delete_prefix('www.')
+      path = uri.path
+
+      if path&.empty?
+        # CDP doesn't allow for making trailing '/' optional, so we just allow
+        # any trailing character and filter it out with our regex.
+        # Similarly with leading 'www.' vs other subdomains and https vs http
+        "http*://*#{host}?"
+      else
+        "http*://*#{host}/#{path}"
+      end
+    end
+  end
+
+  # If something went wrong, we don't want to hang due to an error, instead
+  # we'll just dump all requests
+  def continue_all_requests!
+    ids = browser.cdp_events['Network.requestIntercepted'].map(&:request_id)
+    ids.each do |id|
+      browser.execute_cdp(
+        'Network.continueInterceptedRequest',
+        'interceptionId' => id
+      )
+    rescue StandardError
+      next # Usually they've already been continued, but we don't care
+    end
   end
 end
 

@@ -6,6 +6,7 @@ PATH
       chrome_remote (>= 0.2.0)
       concurrent-ruby (~> 1)
       rack (~> 2.0)
+      selenium-webdriver (>= 3.13, < 3.142)
 
 GEM
   remote: https://rubygems.org/
@@ -13,7 +14,7 @@ GEM
     addressable (2.6.0)
       public_suffix (>= 2.0.2, < 4.0)
     ast (2.4.0)
-    awesome_print (1.8.0)
+    awesome_print (2.0.0.pre2)
     backports (2.8.2)
     capybara (3.12.0)
       addressable
@@ -110,7 +111,7 @@ PLATFORMS
   ruby
 
 DEPENDENCIES
-  awesome_print
+  awesome_print (>= 2.0.0pre, < 3.0)
   bundler (~> 2.0)
   haml
   pry
@@ -119,7 +120,6 @@ DEPENDENCIES
   rspec (~> 3.0)
   rubocop (~> 0.61)
   scree!
-  selenium-webdriver (>= 3.13, < 3.142)
   sinatra (~> 2.0)
   sinatra-contrib
 

@@ -82,16 +82,16 @@ module Scree
       end
 
       def wait_for_response(pattern, wait)
-        begin_index = page.driver.browser.cdp_events['Network.responseReceived'].count
+        begin_index = page.driver.browser.fetch_events('Network.responseReceived').count
         yield
 
         Timeout.timeout(wait) do
           loop do
             current_events =
-              page.driver.browser.cdp_events['Network.responseReceived'][begin_index..-1]
+              page.driver.browser.fetch_events('Network.responseReceived')[begin_index..-1]
             received =
               current_events.any? do |event|
-                event.response.url.match? pattern
+                event.dig('response', 'url').match? pattern
               end
 
             return true if received

@@ -2,7 +2,14 @@ require 'capybara/dsl'
 
 module MissingSessionMethods
   NEW_SESSION_METHODS =
-    %i[with_user_agent console_messages error_messages header].freeze
+    %i[
+      block_url
+      unblock_url
+      with_user_agent
+      console_messages
+      error_messages
+      header
+    ].freeze
 
   def with_user_agent(user_agent_string)
     unless block_given?
@@ -28,6 +35,10 @@ module MissingSessionMethods
 
   def header(*args)
     driver.header(*args)
+  end
+
+  def block_urls(urls)
+    driver.block_urls(urls)
   end
 
   NEW_SESSION_METHODS.each do |method|

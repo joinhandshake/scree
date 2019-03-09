@@ -146,8 +146,8 @@ describe Scree::RspecMatchers do
     end
 
     it 'fails if no http response received in block' do
-      expect(page.driver.browser)
-        .to receive(:cdp_events).and_return(cdp_events).at_least(:twice)
+      expect(page.driver.browser).
+        to receive(:cdp_events).and_return(cdp_events).at_least(:twice)
 
       expect do
         expect do
@@ -157,8 +157,8 @@ describe Scree::RspecMatchers do
     end
 
     it 'fails if no matching http response received in block' do
-      expect(page.driver.browser)
-        .to receive(:cdp_events).and_return(cdp_events).at_least(:twice)
+      expect(page.driver.browser).
+        to receive(:cdp_events).and_return(cdp_events).at_least(:twice)
 
       expect do
         expect do
