@@ -50,10 +50,7 @@ module CdpDriver
         map[event_name] = Concurrent::Array.new
       end
     @cdp_bridge =
-      Scree::Chrome.client(
-        host: debugger_uri.host,
-        port: debugger_uri.port
-      )
+      Scree::Chrome.client(debugger_uri.host, debugger_uri.port)
 
     enable_cdp_domains(cdp_opts[:domains]) if cdp_opts.key?(:domains)
   end
@@ -89,6 +86,10 @@ module CdpDriver
     promise.value!
   end
 
+  def remove_handler(uuid)
+    @cdp_bridge.remove_handler(uuid)
+  end
+
   def reset_cdp!
     @cdp_bridge.reset!
     @caches =
@@ -122,14 +123,14 @@ module CdpDriver
     domains.each do |domain|
       next unless CDP_DOMAINS.include?(domain)
 
-      @cdp_bridge.send_cmd "#{domain}.enable"
+      @cdp_bridge.tell "#{domain}.enable"
       add_cache_listener(domain)
     end
   end
 
   # Currently, we automatically enable caches for enabled domain events
   def add_cache_listener(domain)
-    @cdp_bridge.add_handler(:global) do |event_name, event|
+    @cdp_bridge.add_global_handler do |event_name, event|
       next unless event_name.start_with?(domain)
 
       @caches[event_name] << event

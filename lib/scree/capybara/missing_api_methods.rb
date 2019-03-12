@@ -1,11 +1,11 @@
 require 'time'
 module MissingApiMethods
   def response_headers
-    response.headers
+    response['headers']
   end
 
   def status_code
-    response.status
+    response['status']
   end
 
   # Interface from capybara-webkit
@@ -76,12 +76,12 @@ module MissingApiMethods
     send_cdp('Network.setExtraHTTPHeaders', params)
   end
 
-  def block_urls(*urls)
-    send_blocked_urls(urls)
+  def with_blocked_urls(*urls)
+    uuid = send_blocked_urls(urls)
 
     yield
-
-    clear_blocked_urls
+  ensure
+    clear_blocked_urls(uuid)
   end
 
   def extra_http_headers=(headers)
@@ -123,28 +123,26 @@ module MissingApiMethods
         event.dig('response', 'url') == browser.current_url
       end
 
-    responses.max_by { |resp| resp['timestamp'] }.response || {}
+    responses.max_by { |resp| resp['timestamp'] }['response'] || {}
   end
 
   # Providing regex/wildcarded URLs is not currently supported, due to the
   # extreme jank-factor of CDP's URL filtering
   def send_blocked_urls(blocked_urls)
-    @request_intercept_uuid = register_blocked_url_callback(blocked_urls)
+    request_intercept_uuid = register_blocked_url_callback
     url_patterns = build_url_patterns(blocked_urls)
 
-    patterns = url_patterns.map { |url| { 'urlPattern' => url } }
-    execute_cdp('Network.setRequestInterception', 'patterns' => patterns)
+    patterns = url_patterns.map { |url| { 'urlPattern' => url, 'interceptionStage' => 'HeadersReceived' } }
+    send_cdp('Network.setRequestInterception', 'patterns' => patterns)
+    request_intercept_uuid
   end
 
-  def clear_blocked_urls
+  def clear_blocked_urls(uuid)
     browser.
       instance_variable_get(:@cdp_bridge).
-      remove_handler(
-        @request_intercept_uuid,
-        event_name: 'Network.requestIntercepted'
-      )
-    @request_intercept_uuid = nil
-    execute_cdp('Network.setRequestInterception', 'patterns' => [])
+      remove_handler(uuid, event_name: 'Network.requestIntercepted')
+    send_cdp('Network.setRequestInterception', 'patterns' => [])
+    continue_all_requests!
   end
 
   # This callback will just block all intercepted requests. This is because
@@ -153,9 +151,9 @@ module MissingApiMethods
   def register_blocked_url_callback
     browser.on_cdp_event('Network.requestIntercepted') do |message|
       response =
-        browser.execute_cdp(
+        send_cdp(
           'Network.continueInterceptedRequest',
-          'interceptionId' => message['interception_id'],
+          'interceptionId' => message['interceptionId'],
           'errorReason'    => 'BlockedByClient'
         )
 
@@ -188,9 +186,12 @@ module MissingApiMethods
   # If something went wrong, we don't want to hang due to an error, instead
   # we'll just dump all requests
   def continue_all_requests!
-    ids = browser.cdp_events['Network.requestIntercepted'].map(&:request_id)
+    ids = browser.
+          fetch_events('Network.requestIntercepted').
+          map { |message| message['interceptionId'] }
+
     ids.each do |id|
-      browser.execute_cdp(
+      send_cdp(
         'Network.continueInterceptedRequest',
         'interceptionId' => id
       )

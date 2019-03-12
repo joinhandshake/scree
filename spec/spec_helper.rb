@@ -82,7 +82,7 @@ RSpec.configure do |config|
 
   # Make sure we don't have old events bleeding over.
   config.after(:each) do
-    page.driver.browser.reset_cdp_cache!
+    page.driver.browser.reset_cdp!
   end
 end
 

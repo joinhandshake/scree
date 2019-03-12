@@ -2,6 +2,7 @@ PATH
   remote: .
   specs:
     scree (0.0.1)
+      aasm
       capybara (>= 3.9, < 3.13)
       chrome_remote (>= 0.2.0)
       concurrent-ruby (~> 1)
@@ -11,6 +12,8 @@ PATH
 GEM
   remote: https://rubygems.org/
   specs:
+    aasm (5.0.1)
+      concurrent-ruby (~> 1.0)
     addressable (2.6.0)
       public_suffix (>= 2.0.2, < 4.0)
     ast (2.4.0)
@@ -81,6 +84,7 @@ GEM
       rainbow (>= 2.2.2, < 4.0)
       ruby-progressbar (~> 1.7)
       unicode-display_width (~> 1.4.0)
+    ruby-prof (0.17.0)
     ruby-progressbar (1.10.0)
     rubyzip (1.2.2)
     selenium-webdriver (3.141.0)
@@ -119,6 +123,7 @@ DEPENDENCIES
   rake (~> 10.0)
   rspec (~> 3.0)
   rubocop (~> 0.61)
+  ruby-prof
   scree!
   sinatra (~> 2.0)
   sinatra-contrib

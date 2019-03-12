@@ -95,76 +95,91 @@ describe Scree::RspecMatchers do
   end
 
   describe 'receive_http_response' do
-    let(:cdp_events) { { 'Network.responseReceived' => [] } }
     let(:test_event) do
-      OpenStruct.new(response: OpenStruct.new(url: 'https://test.example.com'))
+      { 'response' => { 'url' => 'https://test.example.com' } }
     end
     let(:other_event) do
-      OpenStruct.new(response: OpenStruct.new(url: 'https://other.example.com'))
+      { 'response' => { 'url' => 'https://other.example.com' } }
     end
 
     it 'passes if http response received in block' do
-      expect(page.driver.browser).to receive(:cdp_events).and_return(cdp_events).twice
+      expect(page.driver.browser).to(mock_net_events(test_event))
 
       expect do
         expect do
-          cdp_events['Network.responseReceived'] << test_event
+          # noop
         end.to receive_http_response
       end.to_not raise_error
     end
 
     it 'passes if multiple http responses received in block' do
-      expect(page.driver.browser).to receive(:cdp_events).and_return(cdp_events).twice
+      expect(page.driver.browser).to(mock_net_events(test_event, other_event))
 
       expect do
         expect do
-          cdp_events['Network.responseReceived'] << test_event
-          cdp_events['Network.responseReceived'] << other_event
+          # noop
         end.to receive_http_response
       end.to_not raise_error
     end
 
     it 'passes if matching http response received in block' do
-      expect(page.driver.browser).to receive(:cdp_events).and_return(cdp_events).twice
+      expect(page.driver.browser).to(mock_net_events(test_event))
 
       expect do
         expect do
-          cdp_events['Network.responseReceived'] << test_event
+          # noop
+        end.to receive_http_response(%r{^https:\/\/test\.example\.com})
+      end.to_not raise_error
+    end
+
+    it 'passes if matching http response received twice in block' do
+      expect(page.driver.browser).to(mock_net_events(test_event, test_event))
+
+      expect do
+        expect do
+          # noop
         end.to receive_http_response(%r{^https:\/\/test\.example\.com})
       end.to_not raise_error
     end
 
     it 'passes if matching and non-matching http responses received in block' do
-      expect(page.driver.browser).to receive(:cdp_events).and_return(cdp_events).twice
+      expect(page.driver.browser).to(mock_net_events(other_event, test_event))
 
       expect do
         expect do
-          cdp_events['Network.responseReceived'] << test_event
-          cdp_events['Network.responseReceived'] << other_event
+          # noop
         end.to receive_http_response(%r{^https:\/\/test\.example\.com})
       end.to_not raise_error
     end
 
     it 'fails if no http response received in block' do
-      expect(page.driver.browser).
-        to receive(:cdp_events).and_return(cdp_events).at_least(:twice)
+      expect(page.driver.browser).to(mock_net_events)
 
       expect do
         expect do
-          # no-op
+          # noop
         end.to receive_http_response
       end.to raise_error(RSpec::Expectations::ExpectationNotMetError)
     end
 
     it 'fails if no matching http response received in block' do
-      expect(page.driver.browser).
-        to receive(:cdp_events).and_return(cdp_events).at_least(:twice)
+      expect(page.driver.browser).to(mock_net_events(other_event))
 
       expect do
         expect do
-          cdp_events['Network.responseReceived'] << other_event
+          # noop
         end.to receive_http_response(%r{^https:\/\/test\.example\.com})
       end.to raise_error(RSpec::Expectations::ExpectationNotMetError)
+    end
+
+    def mock_net_events(*events)
+      receiver = receive(:on_cdp_event).with('Network.responseReceived')
+
+      events.each do |event|
+        receiver = receiver.and_yield(event)
+      end
+
+      receiver
     end
   end
 end

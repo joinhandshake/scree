@@ -10,9 +10,10 @@ module Scree
   module Chrome
     class << self
       def client(host, port)
-        debug_uri = fetch_debug_uri(host, port)
+        return @client if @client
 
-        Client.new(debug_uri)
+        debug_uri = fetch_debug_uri(host, port)
+        @client   = Client.new(debug_uri)
       end
 
       private

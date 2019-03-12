@@ -33,7 +33,7 @@ describe Capybara::Selenium::Driver do
 
       find('.page-loaded') # Ensure console has time to fire.
 
-      log_message = page.console_messages.first.args.first.value
+      log_message = page.console_messages.first['args'].first['value']
 
       expect(log_message).to eq 'everything is awesome'
     end
@@ -49,7 +49,7 @@ describe Capybara::Selenium::Driver do
 
       find('.page-loaded') # Ensure console has time to fire.
 
-      log_message = page.error_messages.first.args.first.value
+      log_message = page.error_messages.first['args'].first['value']
 
       expect(log_message).to eq 'everything is awful'
     end
@@ -136,57 +136,26 @@ describe Capybara::Selenium::Driver do
     end
   end
 
-  describe '#block_url' do
-    # This exists so we aren't relying on logic that's tested within, although
-    # it unfortunately does duplicate said logic to a certain extent.
-    after(:each) do
-      page.driver.instance_variable_set(:@blocked_urls, Concurrent::Array.new)
-      page.driver.browser.execute_cdp(
-        'Network.setRequestInterception',
-        'patterns' => []
-      )
-    end
-
+  describe '#with_blocked_urls' do
     it 'blocks given url' do
-      page.driver.block_url('https://google.com')
+      blocked_url = 'https://google.com'
 
-      visit 'https://google.com'
-      expect_failure(page.current_url)
+      page.driver.with_blocked_urls('https://google.com') do
+        visit blocked_url
+        expect_failure(blocked_url)
+      end
     end
 
     it 'unblocks urls after execution if block given' do
-      page.driver.block_url('https://bing.com') do
-        visit 'https://bing.com'
-        expect_failure(page.current_url)
+      blocked_url = 'https://bing.com'
+
+      page.driver.with_blocked_urls('https://bing.com') do
+        visit blocked_url
+        expect_failure(blocked_url)
       end
 
-      visit 'https://bing.com'
-      expect_no_failure(page.current_url)
-    end
-  end
-
-  describe '#unblock_url' do
-    it 'unblocks given url' do
-      page.driver.block_url('https://yahoo.com')
-      visit 'https://yahoo.com'
-
-      expect_failure(page.current_url)
-
-      page.driver.unblock_url('https://yahoo.com')
-      visit 'https://yahoo.com'
-
-      expect_no_failure(page.current_url)
-    end
-  end
-
-  describe '#blocked_urls=' do
-    it 'blocks specified urls' do
-      expect do
-        page.driver.blocked_urls = ['https://google.com']
-      end.to raise_error(NotImplementedError)
-    end
-
-    it 'unblocks urls after execution if block given' do
+      visit blocked_url
+      expect_no_failure(blocked_url)
     end
   end
 
@@ -221,27 +190,43 @@ describe Capybara::Selenium::Driver do
   end
 
   def find_load_failure(url)
-    events = page.driver.browser.cdp_events
-    requests =
-      events['Network.requestWillBeSent'].select do |event|
-        event.document_url == url
-      end
-    request_id = requests.max_by(&:timestamp).request_id
-    events['Network.loadingFailed'].find do |event|
-      event.request_id == request_id
+    browser = page.driver.browser
+    request = browser.
+              fetch_events('Network.requestWillBeSent').
+              max_by do |event|
+                next 0 unless urls_equal?(url, event['documentURL'])
+
+                event['timestamp']
+              end
+
+    return nil if request.nil?
+
+    browser.fetch_events('Network.loadingFailed').find do |event|
+      event['requestId'] == request['requestId']
     end
   end
 
   def expect_failure(url)
     failure = find_load_failure(url)
 
-    expect(failure&.error_text).to eq 'net::ERR_BLOCKED_BY_CLIENT'
-    expect(failure&.blocked_reason).to eq 'inspector'
+    expect(failure).to_not be_falsey
+    expect(failure['errorText']).to eq 'net::ERR_BLOCKED_BY_CLIENT'
+    expect(failure['blockedReason']).to eq 'inspector'
   end
 
   def expect_no_failure(url)
     failure = find_load_failure(url)
 
-    expect(failure).to be nil
+    expect(failure).to be_falsey
+  end
+
+  # First we delete the '/' suffix because it is not usually semantically
+  # useful, but does cause false negatives. Then, parse them to URIs, since
+  # this normalizes them and removes some other strange corner-cases
+  def urls_equal?(url_one, url_two)
+    uri_one = URI.parse(url_one.delete_suffix('/'))
+    uri_two = URI.parse(url_two.delete_suffix('/'))
+
+    uri_one == uri_two
   end
 end

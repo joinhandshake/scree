@@ -58,12 +58,13 @@ module Scree
 
     RSpec::Matchers.define :receive_http_response do |pattern = /.*/, wait: Capybara.default_max_wait_time|
       match do |actual|
-        unless actual.is_a? Proc
-          error_message = "expected Block, but received #{actual.class.name}"
-          raise RSpec::Expectations::ExpectationNotMetError(error_message)
-        end
-
+        assert_proc(actual)
         wait_for_response(pattern, wait, &actual)
+      end
+
+      match_when_negated do |actual|
+        assert_proc(actual)
+        wait_for_response(pattern, wait, negated: true, &actual)
       end
 
       failure_message do
@@ -81,24 +82,29 @@ module Scree
         'but one was made'
       end
 
-      def wait_for_response(pattern, wait)
-        begin_index = page.driver.browser.fetch_events('Network.responseReceived').count
+      def assert_proc(actual)
+        return true if actual.is_a? Proc
+
+        error_message = "expected Block, but received #{actual.class.name}"
+        raise RSpec::Expectations::ExpectationNotMetError(error_message)
+      end
+
+      def wait_for_response(pattern, wait, negated: false)
+        browser = page.driver.browser
+        promise = Concurrent::Promises.resolvable_future
+        uuid    =
+          browser.on_cdp_event('Network.responseReceived') do |event|
+            if event.dig('response', 'url').match?(pattern) && promise.pending?
+              browser.remove_handler(uuid)
+              negated && promise.reject || promise.fulfill(event)
+            end
+          end
+
         yield
 
-        Timeout.timeout(wait) do
-          loop do
-            current_events =
-              page.driver.browser.fetch_events('Network.responseReceived')[begin_index..-1]
-            received =
-              current_events.any? do |event|
-                event.dig('response', 'url').match? pattern
-              end
-
-            return true if received
-          end
-        end
-      rescue Timeout::Error
-        false
+        promise.wait(wait)
+        browser.remove_handler(@uuid)
+        promise.fulfilled?
       end
 
       supports_block_expectations
