@@ -87,7 +87,6 @@ module Scree
 
       def perform_setup
         @listeners = Concurrent::Map.new
-        @schema    = schema
         @handlers  =
           Concurrent::Map.new do |map, event_name|
             map[event_name] = Concurrent::Map.new

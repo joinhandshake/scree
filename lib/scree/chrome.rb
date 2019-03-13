@@ -12,22 +12,23 @@ module Scree
       def client(host, port)
         return @client if @client
 
-        debug_uri = fetch_debug_uri(host, port)
-        @client   = Client.new(debug_uri)
+        debug_uri = fetch_debug_url(host, port)
+        raise "debug target not found" if debug_uri.nil?
+
+        @client = Client.new(debug_uri)
       end
 
       private
 
-      def fetch_debug_uri(host, port)
+      def fetch_debug_url(host, port)
         response = Net::HTTP.get(host, '/json', port)
         response = JSON.parse(response)
 
-        all_pages =
+        debugger_urls =
           response.lazy.map do |obj|
-            obj['type'] == 'page' && obj['webSocketDebuggerUrl']
+            obj['type'] == 'page' && obj['webSocketDebuggerUrl'] || nil
           end
-
-        all_pages.find { |url| !url.nil? }
+        debugger_urls.select { |obj| obj }.take(1).first
       end
     end
   end
