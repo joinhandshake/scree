@@ -87,11 +87,13 @@ describe Capybara::Selenium::Driver do
       expect(parsed_cookies['scree']).to eq 'test-cookie'
     end
 
-    xit 'sets a cookie from string' do
+    it 'sets a cookie from string' do
       visit '/'
 
       domain      = URI.parse(current_url).hostname
-      test_cookie = "scree=test-cookie; domain=#{domain}; path=/; expires=#{Time.now.utc}; secure=false; httponly=true"
+      expiry      = (Time.now + 32_400).utc
+      test_cookie = "scree=test-cookie; Domain=#{domain}; "\
+                    "Expires=#{expiry}; Path=/"
 
       expect(page.driver.cookies.count).to eq 1
       expect(page.driver.cookies.first[:value]).to eq 'root-cookie'

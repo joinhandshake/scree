@@ -1,4 +1,6 @@
 require 'time'
+require 'webrick/cookie'
+
 module MissingApiMethods
   def response_headers
     response['headers']
@@ -24,43 +26,14 @@ module MissingApiMethods
   end
 
   def set_cookie(cookie)
-    # Convert capybara-webkit args to what Selenium needs
-    cookie = CGI::Cookie.parse(cookie) if cookie.is_a? String
-
-    # Cookies can come in all kinds of hash formats (depending on what gem
-    # created the hash). We'll try and transform it here.
-
-    cookie_hash = {}
-
-    # Ensure we have string keys for easier processing/lookup
-    cookie = cookie.collect { |key, value| [key.to_s, value] }.to_h
-
-    %w[path domain secure httponly].each do |key|
-      value = cookie.delete(key)
-      value =
-        if value.is_a? Array
-          value.first
-        else
-          value
-        end
-
-      cookie_hash[key.to_sym] = value unless value.nil?
-    end
-
-    cookie_hash[:name] = cookie.delete('name') { cookie.keys.first }
-
-    value = cookie.delete('value') { cookie.delete(cookie_hash[:name]) }
-    cookie_hash[:value] =
-      if value.is_a? Array
-        value.one? && value.first || value.to_a
+    cookie =
+      if cookie.is_a? String
+        parse_cookie(cookie)
       else
-        value
+        normalize_cookie(cookie)
       end
 
-    expires = cookie.delete('expires')
-    cookie_hash[:expires] = Time.parse(expires.to_s) unless expires.nil?
-
-    browser.manage.add_cookie(cookie_hash)
+    browser.manage.add_cookie(cookie)
   end
 
   def delete_cookie(name)
@@ -124,6 +97,43 @@ module MissingApiMethods
       end
 
     responses.max_by { |resp| resp['timestamp'] }['response'] || {}
+  end
+
+  def parse_cookie(cookie)
+    cookie = WEBrick::Cookie.parse_set_cookie(cookie)
+    fields = %i[name value expires max_age domain path secure]
+
+    fields.each_with_object({}) do |field, cookie_hash|
+      value = cookie.send(field)
+      cookie_hash[field] = value unless value.nil?
+    end
+  end
+
+  # Cookies can come in all kinds of hash formats (depending on what gem
+  # created the hash). We'll try and transform it here.
+  def normalize_cookie(cookie)
+    known_attrs =
+      %w[name value expires max_age domain path http_only httponly secure]
+
+    # Ensure we have string keys for easier processing/lookup
+    cookie =
+      cookie.each_with_object({}) do |(key, value), memo|
+        new_key   = key.to_s.downcase.tr('-', '_')
+        new_value = value.is_a?(Array) && value.first || value
+        next if value.nil?
+
+        if known_attrs.include?(new_key)
+          memo[new_key.to_sym] = new_value
+        else
+          memo[:name] = key
+          memo[:value] = new_value
+        end
+      end
+
+    expires = cookie.delete('expires')
+    cookie[:expires] = Time.parse(expires.to_s) unless expires.nil?
+
+    cookie
   end
 
   # Providing regex/wildcarded URLs is not currently supported, due to the
