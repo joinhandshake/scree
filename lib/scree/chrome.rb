@@ -13,7 +13,7 @@ module Scree
         return @client if @client
 
         debug_uri = fetch_debug_url(host, port)
-        raise "debug target not found" if debug_uri.nil?
+        raise 'debug target not found' if debug_uri.nil?
 
         @client = Client.new(debug_uri)
       end
