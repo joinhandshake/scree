@@ -1,4 +1,5 @@
 require 'concurrent'
+require 'concurrent-edge'
 require 'scree/chrome/driver'
 
 module Scree

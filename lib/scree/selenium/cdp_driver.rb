@@ -2,6 +2,7 @@
 
 require 'chrome_remote'
 require 'concurrent'
+require 'concurrent-edge'
 require 'ostruct'
 require 'securerandom'
 require 'selenium/webdriver/common/port_prober'
@@ -100,6 +101,23 @@ module CdpDriver
 
   def fetch_events(event_name)
     @caches[event_name].to_a
+  end
+
+  def wait_for_response(pattern, wait, negated: false)
+    promise = Concurrent::Promises.resolvable_future
+    uuid    =
+      on_cdp_event('Network.responseReceived') do |event|
+        if event.dig('response', 'url').match?(pattern) && promise.pending?
+          remove_handler(uuid)
+          negated && promise.reject || promise.fulfill(event)
+        end
+      end
+
+    yield
+
+    promise.wait(wait)
+    remove_handler(@uuid)
+    promise.fulfilled?
   end
 
   private

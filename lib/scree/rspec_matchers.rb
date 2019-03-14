@@ -56,16 +56,14 @@ module Scree
     end
 
     RSpec::Matchers.define :receive_http_response do |pattern = /.*/, wait: Capybara.default_max_wait_time|
-      require 'concurrent'
-
       match do |actual|
         assert_proc(actual)
-        wait_for_response(pattern, wait, &actual)
+        page.driver.browser.wait_for_response(pattern, wait, &actual)
       end
 
       match_when_negated do |actual|
         assert_proc(actual)
-        wait_for_response(pattern, wait, negated: true, &actual)
+        page.driver.browser.wait_for_response(pattern, wait, negated: true, &actual)
       end
 
       failure_message do
@@ -88,24 +86,6 @@ module Scree
 
         error_message = "expected Block, but received #{actual.class.name}"
         raise RSpec::Expectations::ExpectationNotMetError(error_message)
-      end
-
-      def wait_for_response(pattern, wait, negated: false)
-        browser = page.driver.browser
-        promise = Concurrent::Promises.resolvable_future
-        uuid    =
-          browser.on_cdp_event('Network.responseReceived') do |event|
-            if event.dig('response', 'url').match?(pattern) && promise.pending?
-              browser.remove_handler(uuid)
-              negated && promise.reject || promise.fulfill(event)
-            end
-          end
-
-        yield
-
-        promise.wait(wait)
-        browser.remove_handler(@uuid)
-        promise.fulfilled?
       end
 
       supports_block_expectations
