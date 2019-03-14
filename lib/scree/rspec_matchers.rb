@@ -1,8 +1,6 @@
 module Scree
   module RspecMatchers
-    require 'concurrent'
     require 'rspec/expectations'
-    require 'timeout'
 
     RSpec::Matchers.define :have_errors do |*expected|
       match do |actual|
@@ -58,6 +56,8 @@ module Scree
     end
 
     RSpec::Matchers.define :receive_http_response do |pattern = /.*/, wait: Capybara.default_max_wait_time|
+      require 'concurrent'
+
       match do |actual|
         assert_proc(actual)
         wait_for_response(pattern, wait, &actual)
