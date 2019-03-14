@@ -1,5 +1,6 @@
 module Scree
   module RspecMatchers
+    require 'concurrent'
     require 'rspec/expectations'
     require 'timeout'
 

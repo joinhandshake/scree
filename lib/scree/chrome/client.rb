@@ -12,7 +12,7 @@ module Scree
       # Blocking; only returns when response received
       def ask(command, params = {})
         msg_id  = Random.new.rand(2**16)
-        promise = ::Concurrent::Promises.resolvable_future
+        promise = Concurrent::Promises.resolvable_future
 
         @listeners[msg_id] = promise
 
