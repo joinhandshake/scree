@@ -41,11 +41,11 @@ describe Capybara::Session do
     end
   end
 
-  describe '#block_urls' do
-    it "calls the driver's block_urls method" do
-      expect(page.driver).to receive(:block_urls)
+  describe '#with_blocked_urls' do
+    it "calls the driver's with_blocked_urls method" do
+      expect(page.driver).to receive(:with_blocked_urls)
 
-      page.block_urls('') do
+      page.with_blocked_urls('') do
         visit '/'
       end
     end

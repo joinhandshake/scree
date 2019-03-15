@@ -139,19 +139,45 @@ describe Capybara::Selenium::Driver do
   end
 
   describe '#with_blocked_urls' do
-    it 'blocks given url' do
-      blocked_url = 'https://google.com'
+    let(:blocked_url) do
+      Capybara.current_session.send(:server_url) + '/check-headers'
+    end
+    let(:allowed_url) do
+      Capybara.current_session.send(:server_url) + '/check-cookies'
+    end
 
-      page.driver.with_blocked_urls('https://google.com') do
+    it 'blocks given url' do
+      page.driver.with_blocked_urls(blocked_url) do
         visit blocked_url
         expect_failure(blocked_url)
       end
     end
 
-    it 'unblocks urls after execution if block given' do
-      blocked_url = 'https://bing.com'
+    it 'does not block other urls' do
+      page.driver.with_blocked_urls(blocked_url) do
+        visit blocked_url
+        expect_failure(blocked_url)
 
-      page.driver.with_blocked_urls('https://bing.com') do
+        visit allowed_url
+        expect_no_failure(allowed_url)
+      end
+    end
+
+    it 'blocks partial urls' do
+      blocked_path = '/check-headers'
+      other_path   = '/check-cookies'
+
+      page.driver.with_blocked_urls(blocked_path) do
+        visit blocked_path
+        expect_failure(blocked_path)
+
+        visit other_path
+        expect_no_failure(other_path)
+      end
+    end
+
+    it 'unblocks urls after execution if block given' do
+      page.driver.with_blocked_urls(blocked_url) do
         visit blocked_url
         expect_failure(blocked_url)
       end
@@ -196,7 +222,7 @@ describe Capybara::Selenium::Driver do
     request = browser.
               fetch_events('Network.requestWillBeSent').
               max_by do |event|
-                next 0 unless urls_equal?(url, event['documentURL'])
+                next 0 unless event['documentURL'].match?(url)
 
                 event['timestamp']
               end
@@ -220,15 +246,5 @@ describe Capybara::Selenium::Driver do
     failure = find_load_failure(url)
 
     expect(failure).to be_falsey
-  end
-
-  # First we delete the '/' suffix because it is not usually semantically
-  # useful, but does cause false negatives. Then, parse them to URIs, since
-  # this normalizes them and removes some other strange corner-cases
-  def urls_equal?(url_one, url_two)
-    uri_one = URI.parse(url_one.delete_suffix('/'))
-    uri_two = URI.parse(url_two.delete_suffix('/'))
-
-    uri_one == uri_two
   end
 end

@@ -37,7 +37,7 @@ module MissingSessionMethods
   end
 
   def with_blocked_urls(urls, &block)
-    with_blocked_urls(*urls, &block)
+    driver.with_blocked_urls(*urls, &block)
   end
 
   NEW_SESSION_METHODS.each do |method|

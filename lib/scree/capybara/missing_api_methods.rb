@@ -139,7 +139,7 @@ module MissingApiMethods
   # Providing regex/wildcarded URLs is not currently supported, due to the
   # extreme jank-factor of CDP's URL filtering
   def send_blocked_urls(blocked_urls)
-    request_intercept_uuid = register_blocked_url_callback
+    request_intercept_uuid = register_blocked_url_callback(blocked_urls)
     url_patterns = build_url_patterns(blocked_urls)
 
     patterns = url_patterns.map { |url| { 'urlPattern' => url, 'interceptionStage' => 'HeadersReceived' } }
@@ -158,16 +158,20 @@ module MissingApiMethods
   # This callback will just block all intercepted requests. This is because
   # Chrome doesn't allow you to register multiple interceptions, nor merge
   # existing ones, so we're overwriting what, if anything is there anyway.
-  def register_blocked_url_callback
+  def register_blocked_url_callback(blocked_urls)
+    require 'awesome_print'
     browser.on_cdp_event('Network.requestIntercepted') do |message|
+      id       = message['interceptionId']
+      url      = message.dig('request', 'url')
       response =
-        send_cdp(
-          'Network.continueInterceptedRequest',
-          'interceptionId' => message['interceptionId'],
-          'errorReason'    => 'BlockedByClient'
-        )
+        if blocked_urls.any? { |blocked_url| filter_url?(url, blocked_url) }
+          block_request(id)
+        else
+          continue_request(id)
+        end
 
       error = response.dig('error', 'message')
+
       raise error if error
     rescue StandardError
       continue_all_requests!
@@ -175,22 +179,59 @@ module MissingApiMethods
     end
   end
 
-  # Chrome doesn't take actual regex, just wildcards '*' and '?'
   def build_url_patterns(blocked_urls)
     blocked_urls.map do |url|
-      uri  = URI.parse(url)
-      host = uri.host.delete_prefix('www.')
-      path = uri.path
+      uri = URI.parse(url)
 
-      if path&.empty?
-        # CDP doesn't allow for making trailing '/' optional, so we just allow
-        # any trailing character and filter it out with our regex.
-        # Similarly with leading 'www.' vs other subdomains and https vs http
-        "http*://*#{host}?"
+      # If no scheme, wildcard the beginning, since it's a partial URL
+      url = '*' + url if uri.scheme.nil?
+
+      # If no path, we may or may not end up with a trailing '/'. Chrome only
+      # allows wildcards '*' (zero or more), and '?' (exactly one). To handle
+      # this, we'll have to catch all requests to domain and handle them with
+      # regex in the callback.
+      url.delete_suffix('/') + '*'
+    end
+  end
+
+  def filter_url?(url, filter_url)
+    URI.split(url).zip(calculate_filters(filter_url)).all? do |part, filter|
+      if filter
+        (part || '').match?(filter) # Allows us to pass when filter allows empty
       else
-        "http*://*#{host}/#{path}"
+        part.nil?
       end
     end
+  end
+
+  def calculate_filters(filter_url)
+    filter_data = URI.split(filter_url)
+    host_regex  = /
+      (
+        (?:[\p{L}\p{N}][\p{L}\p{N}]*.)+[\p{L}\p{N}]{2,}|        # IDN
+        ((?:(?:^|\.)(?:\d|[1-9]\d|1\d{2}|2[0-4]\d|25[0-5])){4}) # IP
+      )
+    /x
+    defaults = [/\w+/, nil, host_regex, /\d*/, nil, %r{/?}, nil, nil, nil]
+
+    filter_data.zip(defaults).map do |filter, default|
+      filter&.length&.positive? && filter || default
+    end
+  end
+
+  def block_request(interception_id, with: 'BlockedByClient')
+    send_cdp(
+      'Network.continueInterceptedRequest',
+      'interceptionId' => interception_id,
+      'errorReason'    => with
+    )
+  end
+
+  def continue_request(interception_id)
+    send_cdp(
+      'Network.continueInterceptedRequest',
+      'interceptionId' => interception_id
+    )
   end
 
   # If something went wrong, we don't want to hang due to an error, instead
@@ -201,12 +242,9 @@ module MissingApiMethods
           map { |message| message['interceptionId'] }
 
     ids.each do |id|
-      send_cdp(
-        'Network.continueInterceptedRequest',
-        'interceptionId' => id
-      )
+      continue_request(id)
     rescue StandardError
-      next # Usually they've already been continued, but we don't care
+      false # Usually they've already been continued, but we don't care
     end
   end
 end
