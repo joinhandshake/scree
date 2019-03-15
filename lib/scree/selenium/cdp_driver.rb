@@ -103,7 +103,7 @@ module CdpDriver
     @caches[event_name].to_a
   end
 
-  def wait_for_response(pattern, wait, negated: false)
+  def wait_for_http_response(pattern, wait, negated: false)
     promise = Concurrent::Promises.resolvable_future
     uuid    =
       on_cdp_event('Network.responseReceived') do |event|

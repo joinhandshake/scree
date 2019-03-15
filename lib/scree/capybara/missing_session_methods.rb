@@ -3,8 +3,7 @@ require 'capybara/dsl'
 module MissingSessionMethods
   NEW_SESSION_METHODS =
     %i[
-      block_url
-      unblock_url
+      with_blocked_urls
       with_user_agent
       console_messages
       error_messages
@@ -37,8 +36,8 @@ module MissingSessionMethods
     driver.header(*args)
   end
 
-  def block_urls(urls)
-    driver.block_urls(urls)
+  def with_blocked_urls(urls, &block)
+    with_blocked_urls(*urls, &block)
   end
 
   NEW_SESSION_METHODS.each do |method|

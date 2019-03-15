@@ -58,12 +58,12 @@ module Scree
     RSpec::Matchers.define :receive_http_response do |pattern = /.*/, wait: Capybara.default_max_wait_time|
       match do |actual|
         assert_proc(actual)
-        page.driver.browser.wait_for_response(pattern, wait, &actual)
+        page.driver.browser.wait_for_http_response(pattern, wait, &actual)
       end
 
       match_when_negated do |actual|
         assert_proc(actual)
-        page.driver.browser.wait_for_response(pattern, wait, negated: true, &actual)
+        page.driver.browser.wait_for_http_response(pattern, wait, negated: true, &actual)
       end
 
       failure_message do
