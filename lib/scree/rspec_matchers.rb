@@ -58,16 +58,35 @@ module Scree
     RSpec::Matchers.define :receive_http_response do |pattern = /.*/, wait: Capybara.default_max_wait_time|
       match do |actual|
         assert_proc(actual)
+        current_events =
+          page.driver.browser.fetch_events('Network.responseReceived')
+
         page.driver.browser.wait_for_http_response(pattern, wait, &actual)
+
+        @actual_events =
+          page.driver.browser.fetch_events('Network.responseReceived') - current_events
       end
 
       match_when_negated do |actual|
         assert_proc(actual)
+        current_events =
+          page.driver.browser.fetch_events('Network.responseReceived')
+
         page.driver.browser.wait_for_http_response(pattern, wait, negated: true, &actual)
+
+        @actual_events =
+          page.driver.browser.fetch_events('Network.responseReceived') - current_events
       end
 
       failure_message do
-        "expected an HTTP response matching #{pattern.inspect}, but none received"
+        event_urls =
+          if @actual_events.any?
+            @actual_events.map { |event| event.dig('response', 'url') }.join(', ')
+          else
+            'none'
+          end
+
+        "expected an HTTP response matching #{pattern.inspect}, but received #{event_urls}"
       end
 
       # If you're trying to say that a URL comes up, but not with the substring,
@@ -78,7 +97,7 @@ module Scree
       # that response is made and validated.
       failure_message_when_negated do
         "did not expect an HTTP response matching #{pattern.inspect}, "\
-        'but one was made'
+        'but one was received'
       end
 
       def assert_proc(actual)
