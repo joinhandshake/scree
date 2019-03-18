@@ -61,10 +61,12 @@ module Scree
         current_events =
           page.driver.browser.fetch_events('Network.responseReceived')
 
-        page.driver.browser.wait_for_http_response(pattern, wait, &actual)
+        success = page.driver.browser.wait_for_http_response(pattern, wait, &actual)
 
         @actual_events =
           page.driver.browser.fetch_events('Network.responseReceived') - current_events
+
+        success
       end
 
       match_when_negated do |actual|
@@ -72,10 +74,12 @@ module Scree
         current_events =
           page.driver.browser.fetch_events('Network.responseReceived')
 
-        page.driver.browser.wait_for_http_response(pattern, wait, negated: true, &actual)
+        success = page.driver.browser.wait_for_http_response(pattern, wait, negated: true, &actual)
 
         @actual_events =
           page.driver.browser.fetch_events('Network.responseReceived') - current_events
+
+        success
       end
 
       failure_message do
