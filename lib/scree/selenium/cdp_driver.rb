@@ -107,7 +107,8 @@ module CdpDriver
     promise = Concurrent::Promises.resolvable_future
     uuid    =
       on_cdp_event('Network.responseReceived') do |event|
-        if event.dig('response', 'url').match?(pattern) && promise.pending?
+        url = event.dig('response', 'url')
+        if url.match?(pattern) || url.include?(pattern) && promise.pending?
           remove_handler(uuid)
           negated && promise.reject || promise.fulfill(event)
         end
