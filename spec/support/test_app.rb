@@ -10,13 +10,6 @@ class TestApp < Sinatra::Base
   set :show_exceptions, false
 
   get '/' do
-    response.set_cookie(
-      'capybara',
-      value:  'root-cookie',
-      domain: request.host,
-      path:   request.path
-    )
-
     haml <<~HAML_DOC
       %h1 Scree Test Server
       %p Hello fine tester!
@@ -65,10 +58,6 @@ class TestApp < Sinatra::Base
       .request-headers
         #{request.env.to_json}
     HAML_DOC
-  end
-
-  get '/check-cookies' do
-    haml "%p\n  #{request.cookies.to_json}"
   end
 
   get '/console-log' do

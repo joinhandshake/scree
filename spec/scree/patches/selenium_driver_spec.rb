@@ -1,6 +1,9 @@
 require 'spec_helper'
+require 'scree/patches/selenium_driver'
 
-describe Selenium::WebDriver::Chrome::Driver do
+describe SeleniumDriver do
+  it 'prepends to Selenium::WebDriver::Chrome::Driver'
+
   describe '#initialize' do
     it 'sets up a CDP bridge'
   end
@@ -9,7 +12,7 @@ describe Selenium::WebDriver::Chrome::Driver do
     it 'executes a CDP command synchronously'
   end
 
-  describe '#send_cdp' do
+  describe '#execute_cdp!' do
     it 'executes a CDP command asynchronously'
   end
 
@@ -19,19 +22,13 @@ describe Selenium::WebDriver::Chrome::Driver do
 
   describe '#wait_for_cdp_event' do
     it 'blocks execution pending a CDP event callback'
-    it 'times out if no CDP event callback received'
   end
 
-  describe '#remove_handler' do
+  describe '#off_cdp_event' do
     it 'removes a CDP event callback'
   end
 
-  describe '#reset!' do
-    it 'clears all cached CDP events'
-    it 'resets the status of the CDP bridge'
-  end
-
-  describe '#fetch_events' do
-    it 'retrieves all events with the given name'
+  describe '#cdp_event_cache' do
+    it 'returns an array of cdp events'
   end
 end

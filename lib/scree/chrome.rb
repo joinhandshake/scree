@@ -1,35 +1,45 @@
-require 'scree/chrome/client'
-require 'json'
-require 'net/http'
-
 # This module is largely based on the chrome_remote gem:
 # https://github.com/cavalle/chrome_remote
 # It does not support some of the functionality this gem requires, so this
 # involved extensive changes to the logic, and embedding here for simplicity.
 module Scree
   module Chrome
-    class << self
-      def client(host, port)
-        return @client if @client
+    # This only encludes domains that support "enable".
+    CDP_DOMAINS = %w[
+      Accessibility
+      Animation
+      ApplicationCache
+      Console
+      CSS
+      Database
+      Debugger
+      DOM
+      DOMSnapshot
+      DOMStorage
+      Fetch
+      HeadlessExperimental
+      HeapProfiler
+      IndexedDB
+      Inspector
+      LayerTree
+      Log
+      Network
+      Overlay
+      Page
+      Performance
+      Profiler
+      Runtime
+      Security
+      ServiceWorker
+    ].freeze
 
-        debug_uri = fetch_debug_url(host, port)
-        raise 'debug target not found' if debug_uri.nil?
+    root = File.expand_path('chrome', __dir__)
 
-        @client = Client.new(debug_uri)
-      end
+    autoload :Client, File.join(root, 'client')
+    autoload :Driver, File.join(root, 'driver')
 
-      private
-
-      def fetch_debug_url(host, port)
-        response = Net::HTTP.get(host, '/json', port)
-        response = JSON.parse(response)
-
-        debugger_urls =
-          response.lazy.map do |obj|
-            obj['type'] == 'page' && obj['webSocketDebuggerUrl'] || nil
-          end
-        debugger_urls.select { |obj| obj }.take(1).first
-      end
+    def self.client_for(host, port, opts = {})
+      Scree::Chrome::Client.new(host, port, opts)
     end
   end
 end

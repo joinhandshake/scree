@@ -1,23 +1,28 @@
+require 'capybara'
 require 'concurrent'
 require 'concurrent-edge'
-require 'scree/chrome/driver'
 
 module Scree
   module Chrome
     class Client
-      def initialize(url)
-        @url = url
-        perform_setup
+      DEFAULT_OPTS = {
+        domains: []
+      }.freeze
+
+      def initialize(host, port, opts = {})
+        @opts = opts
+        perform_setup(host, port)
       end
 
       # Blocking; only returns when response received
       def ask(command, params = {})
         msg_id  = Random.new.rand(2**16)
         promise = Concurrent::Promises.resolvable_future
+        message = { method: command, params: params, id: msg_id }.to_json
 
         @listeners[msg_id] = promise
 
-        @connection.write({ method: command, params: params, id: msg_id }.to_json)
+        @connection.write(message)
         promise.wait(Capybara.default_max_wait_time)
 
         @listeners.delete(msg_id)
@@ -27,7 +32,8 @@ module Scree
       # Non-blocking; response is discarded
       def tell(command, params = {})
         msg_id = Random.new.rand(2**16)
-        @connection.write({ method: command, params: params, id: msg_id }.to_json)
+        message = { method: command, params: params, id: msg_id }.to_json
+        @connection.write(message)
       end
 
       def add_handler(event_name, &block)
@@ -64,6 +70,19 @@ module Scree
         block
       end
 
+      def wait_for_event(event_name, wait: 2, &block)
+        promise = Concurrent::Promises.resolvable_future
+        promise = promise.then(&block) if block_given?
+
+        uuid = add_handler(event_name) do |event|
+          promise.fulfill(event) if promise.pending?
+        end
+
+        promise.wait(wait)
+        remove_handler(uuid, event_name)
+        promise.value!
+      end
+
       # This only resets internal state handled by Scree; it does not currently
       # change/reset anything in Chrome
       def reset!
@@ -76,9 +95,9 @@ module Scree
       def schema
         return @schema if @schema
 
-        uri      = URI.parse(@url)
+        uri      = URI.parse(@connection.url)
         response = Net::HTTP.get(uri.host, '/json/protocol/', uri.port)
-        @schema = JSON.parse(response)
+        @schema  = JSON.parse(response)
       rescue JSON::ParserError
         STDERR.puts('WARN: Unable to fetch Chrome DevTools Protocol schema')
         @schema = {}
@@ -86,18 +105,36 @@ module Scree
 
       private
 
-      def perform_setup
+      def perform_setup(host, port)
         @listeners = Concurrent::Map.new
         @handlers  =
           Concurrent::Map.new do |map, event_name|
             map[event_name] = Concurrent::Map.new
+          end
+        @caches =
+          Concurrent::Map.new do |map, event_name|
+            map[event_name] = Concurrent::Array.new
           end
 
         # Handle all events; intended for handlers that need to filter other
         # than on event name
         @global_handlers = Concurrent::Map.new
 
-        @connection = Driver.connect(@url, &event_handler)
+        @connection = Scree::Chrome::Driver.connect(host, port, &event_handler)
+      end
+
+      def enable_domains
+        @opts[:domains].each do |domain|
+          error = ask("#{domain}.enable").dig('error', 'message')
+          raise error if error
+
+          # Currently, we automatically enable caches for enabled domain events
+          add_global_handler do |event_name, event|
+            next unless event_name.start_with?(domain)
+
+            @caches[event_name] << event
+          end
+        end
       end
 
       def event_handler

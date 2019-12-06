@@ -1,3 +1,9 @@
+require:
+  - rubocop-performance
+  # - rubocop/require_tools
+  - rubocop-rspec
+  - rubocop-thread_safety
+
 AllCops:
   Exclude:
     - bin/**/*
@@ -5,6 +11,9 @@ AllCops:
   TargetRubyVersion: 2.5.3
 
 Rails:
+  Enabled: false
+
+Style/Documentation:
   Enabled: false
 
 Style/FrozenStringLiteralComment:
@@ -33,3 +42,9 @@ Metrics/MethodLength:
 
 Metrics/PerceivedComplexity:
   Max: 8
+
+RSpec/MultipleExpectations:
+  Max: 3
+
+RSpec/ExampleLength:
+  Max: 10

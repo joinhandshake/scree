@@ -58,7 +58,7 @@ module Scree
           return true if @listen_thread&.alive?
 
           @listen_thread =
-            Thread.new do
+            Thread.new do # rubocop:disable ThreadSafety/NewThread
               loop do
                 # Ensure we don't interrupt parses
                 @pause_mutex.synchronize do

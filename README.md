@@ -15,8 +15,6 @@ This gem provides the following:
   - `#status_code` ([won't be implemented](https://groups.google.com/forum/#!topic/selenium-users/fMSHeH9ZVqU/discussion))
   - `#console_messages` ([clunky workaround](https://stackoverflow.com/a/32723053))
   - `#error_messages` ([clunky workaround](https://stackoverflow.com/a/32723053))
-  - `#cookies` (Different API/helpers)
-  - `#set_cookie` (Different API/helpers)
   - `#header` ([clunky workaround](https://stackoverflow.com/a/40868923))
 - `Scree::RspecMatchers` (Convenience)
 
@@ -54,10 +52,6 @@ end
 
 console_messages # array of log events
 error_messages   # array of log events of type 'error'
-
-set_cookie('raw_cookie_string') # Wrapper for page.driver.manage.add_cookie, parses cookie if string (as capybara-webkit uses)
-cookies # Wapper for page.driver.manage.all_cookies
-clear_cookies # Wrapper for page.driver.manage.delete_all_cookies
 
 header('X-TEST-HEADER', 'test') # Sets extra header for next request/navigate _from this page_ (doesn't work with #visit)
 

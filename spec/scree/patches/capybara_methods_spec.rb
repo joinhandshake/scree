@@ -1,27 +1,8 @@
 require 'spec_helper'
-require 'uri'
+require 'scree/patches/capybara_methods'
 
-describe Capybara::Selenium::Driver do
-  describe '#response_headers' do
-    it 'gets response headers' do
-      custom_headers = { 'X-TEST-HEADER' => 'test value' }
-
-      visit '/check-headers'
-      fill_in 'custom_headers', with: custom_headers.to_json
-      click_on 'Submit'
-
-      find('.page-loaded')
-
-      expect(page.response_headers['X-TEST-HEADER']).to eq 'test value'
-    end
-  end
-
-  describe '#status_code' do
-    it 'gets the status code' do
-      visit '/'
-      expect(page.status_code).to eq 200
-    end
-  end
+describe CapybaraMethods do
+  it 'prepends to Capybara::Selenium::Driver'
 
   describe '#console_messages' do
     it 'gets console messages' do
@@ -55,71 +36,6 @@ describe Capybara::Selenium::Driver do
     end
   end
 
-  describe '#cookies' do
-    it 'gets the cookies' do
-      visit '/'
-      expect(page.driver.cookies.first[:value]).to eq 'root-cookie'
-    end
-  end
-
-  describe '#set_cookie' do
-    it 'sets a cookie from hash' do
-      visit '/'
-
-      test_cookie = {
-        name:    'scree',
-        value:   'test-cookie',
-        path:    '/',
-        domain:  URI.parse(current_url).hostname,
-        expires: nil,
-        secure:  false
-      }
-
-      expect(page.driver.cookies.count).to eq 1
-      expect(page.driver.cookies.first[:value]).to eq 'root-cookie'
-
-      page.driver.set_cookie test_cookie
-      visit '/check-cookies'
-
-      parsed_cookies = JSON.parse(page.text)
-
-      expect(parsed_cookies.count).to eq 2
-      expect(parsed_cookies['scree']).to eq 'test-cookie'
-    end
-
-    it 'sets a cookie from string' do
-      visit '/'
-
-      domain      = URI.parse(current_url).hostname
-      expiry      = (Time.now + 32_400).utc
-      test_cookie = "scree=test-cookie; Domain=#{domain}; "\
-                    "Expires=#{expiry}; Path=/"
-
-      expect(page.driver.cookies.count).to eq 1
-      expect(page.driver.cookies.first[:value]).to eq 'root-cookie'
-
-      page.driver.set_cookie test_cookie
-      visit '/check-cookies'
-
-      parsed_cookies = JSON.parse(page.text)
-
-      expect(parsed_cookies.count).to eq 2
-      expect(parsed_cookies['scree']).to eq 'test-cookie'
-    end
-  end
-
-  describe '#clear_cookies' do
-    it 'clears all cookies' do
-      visit '/'
-      expect(page.driver.cookies.first[:value]).to eq 'root-cookie'
-
-      page.driver.clear_cookies
-      visit '/check-cookies'
-
-      expect(JSON.parse(page.text)).to be_empty
-    end
-  end
-
   describe '#header' do
     # This does not work right with CDP; find another way.
     it 'sets extra header' do
@@ -138,12 +54,33 @@ describe Capybara::Selenium::Driver do
     end
   end
 
+  describe '#response_headers' do
+    it 'gets response headers' do
+      custom_headers = { 'X-TEST-HEADER' => 'test value' }
+
+      visit '/check-headers'
+      fill_in 'custom_headers', with: custom_headers.to_json
+      click_on 'Submit'
+
+      find('.page-loaded')
+
+      expect(page.response_headers['X-TEST-HEADER']).to eq 'test value'
+    end
+  end
+
+  describe '#status_code' do
+    it 'gets the status code' do
+      visit '/'
+      expect(page.status_code).to eq 200
+    end
+  end
+
   describe '#with_blocked_urls' do
     let(:blocked_url) do
       Capybara.current_session.send(:server_url) + '/check-headers'
     end
     let(:allowed_url) do
-      Capybara.current_session.send(:server_url) + '/check-cookies'
+      Capybara.current_session.send(:server_url) + '/js-playground'
     end
 
     it 'blocks given url' do
@@ -165,7 +102,7 @@ describe Capybara::Selenium::Driver do
 
     it 'blocks partial urls' do
       blocked_path = '/check-headers'
-      other_path   = '/check-cookies'
+      other_path   = '/js-playground'
 
       page.driver.with_blocked_urls(blocked_path) do
         visit blocked_path
@@ -187,18 +124,6 @@ describe Capybara::Selenium::Driver do
     end
   end
 
-  describe '#extra_http_headers=' do
-    it 'sends extra http headers' do
-      visit '/check-headers'
-      page.driver.extra_http_headers = { 'X-TEST-EXTRA-HEADER' => 'test' }
-
-      click_on 'Submit'
-
-      current_headers = JSON.parse(page.find('.request-headers').text)
-      expect(current_headers['HTTP_X_TEST_EXTRA_HEADER']).to eq 'test'
-    end
-  end
-
   describe '#user_agent' do
     it 'returns the current user_agent' do
       visit '/'
@@ -207,13 +132,31 @@ describe Capybara::Selenium::Driver do
     end
   end
 
-  describe '#user_agent=' do
-    it 'sets the current user_agent' do
-      visit '/'
+  describe '#with_user_agent' do
+    it 'uses specified user-agent within block' do
+      test_ua = 'TestFramework/1.0'
 
-      page.driver.user_agent = 'TestBrowser'
+      with_user_agent(test_ua) do
+        visit '/check-headers'
+        headers = JSON.parse(find('.current-headers').text)
+        expect(headers['HTTP_USER_AGENT']).to eq(test_ua)
+      end
+    end
+
+    it 'correctly resets user-agent after block' do
+      visit '/check-headers'
+
+      test_ua = 'TestFramework/1.0'
+      real_ua = JSON.parse(find('.current-headers').text)['HTTP_USER_AGENT']
+
+      with_user_agent(test_ua) do
+        refresh
+      end
+
       refresh
-      expect(page.driver.user_agent).to eq('TestBrowser')
+      current_ua = JSON.parse(find('.current-headers').text)['HTTP_USER_AGENT']
+
+      expect(current_ua).to eq(real_ua)
     end
   end
 
@@ -237,7 +180,7 @@ describe Capybara::Selenium::Driver do
   def expect_failure(url)
     failure = find_load_failure(url)
 
-    expect(failure).to_not be_falsey
+    expect(failure).not_to be_falsey
     expect(failure['errorText']).to eq 'net::ERR_BLOCKED_BY_CLIENT'
     expect(failure['blockedReason']).to eq 'inspector'
   end

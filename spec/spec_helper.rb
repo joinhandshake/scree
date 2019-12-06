@@ -79,11 +79,6 @@ RSpec.configure do |config|
   config.expect_with :rspec do |c|
     c.syntax = :expect
   end
-
-  # Make sure we don't have old events bleeding over.
-  config.after(:each) do
-    page.driver.browser.reset_cdp!
-  end
 end
 
 Capybara.configure do |config|

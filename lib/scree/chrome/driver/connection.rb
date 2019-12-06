@@ -1,18 +1,19 @@
+require 'concurrent'
+require 'concurrent-edge'
 require 'websocket/driver'
-require 'scree/chrome/driver/listener'
-require 'scree/chrome/driver/socket'
 
 module Scree
   module Chrome
     module Driver
       class Connection
-        attr_reader :error
+        attr_reader :error, :url
 
         def initialize(url, &block)
+          @url            = url
           @currently_open = Concurrent::AtomicBoolean.new(false)
-          @event_handler  = block
-          @socket         = Scree::Chrome::Driver::Socket.new(url)
-          @driver         = ::WebSocket::Driver.client(@socket)
+          @event_handler  = block || default_handler
+          @socket         = Scree::Chrome::Driver::Socket.new(@url)
+          @driver         = WebSocket::Driver.client(@socket)
           @listener       = Listener.new(@driver, @socket)
 
           register_callbacks
@@ -66,10 +67,7 @@ module Scree
           end
 
           @driver.on(:message) do |event|
-            event_data = event.data
-            next @event_handler.call(event_data) if @event_handler
-
-            process_event(event_data)
+            @event_handler.call(event.data)
           end
         end
 
@@ -79,13 +77,15 @@ module Scree
         end
 
         # Default event handler, only called if no block given to constructor
-        def process_event(event)
-          # Limit channel capacity to ensure we don't get too much milk and
-          # block if buffer is full. The websocket gem we're using uses
-          # eventmachine under the hood, so this should be ok, but if we
-          # switch, make sure these callbacks do not happen synchronously
-          @events ||= Concurrent::Promises::Channel.new(4)
-          @events.push(event).wait!
+        def default_handler
+          proc do |event|
+            # Limit channel capacity to ensure we don't get too much milk and
+            # block if buffer is full. The websocket gem we're using uses
+            # eventmachine under the hood, so this should be ok, but if we
+            # switch, make sure these callbacks do not happen synchronously
+            @events ||= Concurrent::Promises::Channel.new(4)
+            @events.push(event)
+          end
         end
       end
     end

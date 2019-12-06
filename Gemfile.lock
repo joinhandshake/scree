@@ -2,19 +2,15 @@ PATH
   remote: .
   specs:
     scree (0.0.1)
-      aasm
       capybara (>= 3.9, < 3.13)
-      chrome_remote (>= 0.2.0)
       concurrent-ruby (~> 1)
       concurrent-ruby-edge (< 1)
-      rack (~> 2.0)
       selenium-webdriver (>= 3.13, < 3.142)
+      websocket-driver (~> 0.7)
 
 GEM
   remote: https://rubygems.org/
   specs:
-    aasm (5.0.2)
-      concurrent-ruby (~> 1.0)
     addressable (2.6.0)
       public_suffix (>= 2.0.2, < 4.0)
     ast (2.4.0)
@@ -30,8 +26,6 @@ GEM
       xpath (~> 3.2)
     childprocess (0.9.0)
       ffi (~> 1.0, >= 1.0.11)
-    chrome_remote (0.2.0)
-      websocket-driver (~> 0.6)
     coderay (1.1.2)
     concurrent-ruby (1.1.5)
     concurrent-ruby-edge (0.5.0)
@@ -87,6 +81,12 @@ GEM
       rainbow (>= 2.2.2, < 4.0)
       ruby-progressbar (~> 1.7)
       unicode-display_width (~> 1.4.0)
+    rubocop-performance (1.0.0)
+      rubocop (>= 0.58.0)
+    rubocop-rspec (1.32.0)
+      rubocop (>= 0.60.0)
+    rubocop-thread_safety (0.3.4)
+      rubocop (>= 0.51.0)
     ruby-progressbar (1.10.0)
     rubyzip (1.2.2)
     selenium-webdriver (3.141.0)
@@ -125,6 +125,9 @@ DEPENDENCIES
   rake (~> 10.0)
   rspec (~> 3.0)
   rubocop (~> 0.61)
+  rubocop-performance
+  rubocop-rspec
+  rubocop-thread_safety
   scree!
   sinatra (~> 2.0)
   sinatra-contrib

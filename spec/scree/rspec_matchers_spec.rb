@@ -1,100 +1,89 @@
 require 'spec_helper'
 require 'scree/rspec_matchers'
-require 'ostruct'
 
-describe Scree::RspecMatchers do
-  describe 'have_errors' do
+describe RspecMatchers do
+  describe '#have_errors' do
+    let(:error_driver) do
+      instance_double(
+        'Capybara::Selenium::Driver',
+        error_messages: [{ 'message' => 'Test message' }]
+      )
+    end
+    let(:pass_driver) do
+      instance_double(
+        'Capybara::Selenium::Driver',
+        error_messages: []
+      )
+    end
+
     it 'passes if error messages are present' do
-      message_double = double('Message', message: 'Test message')
-      driver_double  = double('Driver', error_messages: [message_double])
-
-      expect { expect(driver_double).to have_errors }.to_not raise_error
+      expect { expect(error_driver).to have_errors }.not_to raise_error
     end
 
     it 'passes if expected error messages are present' do
-      message_double = double('Message', message: 'Test message')
-      driver_double  = double('Driver', error_messages: [message_double])
-
       expect do
-        expect(driver_double).to have_errors('Test message')
-      end.to_not raise_error
+        expect(error_driver).to have_errors('Test message')
+      end.not_to raise_error
     end
 
     it 'fails if no error messages are present' do
-      driver_double = double('Driver', error_messages: [])
-
       expect do
-        expect(driver_double).to have_errors
+        expect(pass_driver).to have_errors
       end.to raise_error(RSpec::Expectations::ExpectationNotMetError)
     end
 
     it 'fails if expected error messages are not present' do
-      message_double = double('Message', message: 'Test message')
-      driver_double  = double('Driver', error_messages: [message_double])
-
       expect do
-        expect(driver_double).to have_errors('Test message', 'Other message')
+        expect(error_driver).to have_errors('Test message', 'Other message')
       end.to raise_error(RSpec::Expectations::ExpectationNotMetError)
     end
 
     it 'fails if unexpected error messages are present' do
-      message_doubles =
-        [
-          double('Message', message: 'Test message'),
-          double('Message', message: 'Other message')
+      driver_double = instance_double(
+        'Capybara::Selenium::Driver',
+        error_messages: [
+          { 'message' => 'Test message' },
+          { 'message' => 'Other message' }
         ]
-      driver_double = double('Driver', error_messages: message_doubles)
+      )
 
       expect do
         expect(driver_double).to have_errors('Test message')
       end.to raise_error(RSpec::Expectations::ExpectationNotMetError)
     end
 
-    context 'negated' do
+    context 'when negated' do
       it 'passes if no error messages are present' do
-        driver_double = double('Driver', error_messages: [])
-
-        expect { expect(driver_double).to_not have_errors }.to_not raise_error
+        expect { expect(pass_driver).not_to have_errors }.not_to raise_error
       end
 
       it 'passes if expected not-present error messages are not present' do
-        driver_double = double('Driver', error_messages: [])
-
         expect do
-          expect(driver_double).to_not have_errors('Test message')
-        end.to_not raise_error
+          expect(pass_driver).not_to have_errors('Test message')
+        end.not_to raise_error
       end
 
       it 'passes if unexpected not-present error messages are present' do
-        message_double = double('Message', message: 'Test message')
-        driver_double  = double('Driver', error_messages: [message_double])
-
         expect do
-          expect(driver_double).to_not have_errors('Other message')
-        end.to_not raise_error
+          expect(error_driver).not_to have_errors('Other message')
+        end.not_to raise_error
       end
 
       it 'fails if error messages are present' do
-        message_double = double('Message', message: 'Test message')
-        driver_double  = double('Driver', error_messages: [message_double])
-
         expect do
-          expect(driver_double).to_not have_errors
+          expect(error_driver).not_to have_errors
         end.to raise_error(RSpec::Expectations::ExpectationNotMetError)
       end
 
       it 'fails if expected not-present error messages are present' do
-        message_double = double('Message', message: 'Test message')
-        driver_double  = double('Driver', error_messages: [message_double])
-
         expect do
-          expect(driver_double).to_not have_errors('Test message')
+          expect(error_driver).not_to have_errors('Test message')
         end.to raise_error(RSpec::Expectations::ExpectationNotMetError)
       end
     end
   end
 
-  describe 'receive_http_response' do
+  describe '#receive_http_response' do
     let(:test_event) do
       { 'response' => { 'url' => 'https://test.example.com' } }
     end
@@ -109,7 +98,7 @@ describe Scree::RspecMatchers do
         expect do
           # noop
         end.to receive_http_response
-      end.to_not raise_error
+      end.not_to raise_error
     end
 
     it 'passes if multiple http responses received in block' do
@@ -119,7 +108,7 @@ describe Scree::RspecMatchers do
         expect do
           # noop
         end.to receive_http_response
-      end.to_not raise_error
+      end.not_to raise_error
     end
 
     it 'passes if matching http response received in block' do
@@ -129,7 +118,7 @@ describe Scree::RspecMatchers do
         expect do
           # noop
         end.to receive_http_response(%r{^https:\/\/test\.example\.com})
-      end.to_not raise_error
+      end.not_to raise_error
     end
 
     it 'passes if matching http response received twice in block' do
@@ -139,7 +128,7 @@ describe Scree::RspecMatchers do
         expect do
           # noop
         end.to receive_http_response(%r{^https:\/\/test\.example\.com})
-      end.to_not raise_error
+      end.not_to raise_error
     end
 
     it 'passes if matching and non-matching http responses received in block' do
@@ -149,7 +138,7 @@ describe Scree::RspecMatchers do
         expect do
           # noop
         end.to receive_http_response(%r{^https:\/\/test\.example\.com})
-      end.to_not raise_error
+      end.not_to raise_error
     end
 
     it 'fails if no http response received in block' do
